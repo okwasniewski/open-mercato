@@ -1,4 +1,4 @@
-import { test as base } from '@e2edev/playwright';
+import { test as base } from '@e2edev/web';
 import { OmApi, type Persona } from './api';
 
 export interface SuiteFixtures {

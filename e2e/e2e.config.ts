@@ -1,6 +1,6 @@
 import type { E2EConfig } from 'e2e';
 import { createAgent } from 'e2e/agent';
-import { playwright } from '@e2edev/playwright';
+import { web } from '@e2edev/web';
 import { gateway } from 'ai';
 
 // The Open Mercato admin runs at APP_URL (default: the local dev server).
@@ -16,7 +16,7 @@ const model = gateway(process.env.E2E_MODEL ?? 'openai/gpt-5.6-luna');
 
 export default {
   projectId: 'open-mercato',
-  targets: [{ name: 'web', engine: playwright({ url: APP_URL, viewport: { width: 1440, height: 900 } }) }],
+  targets: [{ name: 'web', engine: web({ url: APP_URL, viewport: { width: 1440, height: 900 } }) }],
 
   // Dev-mode Next.js compiles a route on first visit, so budgets are generous.
   timeout: 240_000,

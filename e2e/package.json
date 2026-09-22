@@ -11,10 +11,10 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@e2edev/playwright": "0.11.0-canary-20260917213813",
+    "@e2edev/web": "0.11.0-canary-20260922135036",
     "@types/node": "^24.13.4",
     "ai": "^7.0.102",
-    "e2e": "0.15.0-canary-20260917213813",
+    "e2e": "0.15.0-canary-20260922135036",
     "playwright": "^1.63.0",
     "typescript": "^5.9.3",
     "zod": "^4.6.1"
