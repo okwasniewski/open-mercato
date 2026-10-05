@@ -1,20 +1,18 @@
 ---
-title: yarn test:integration:ephemeral:start
-sidebar_label: yarn test:integration:ephemeral:start
-description: Starts a disposable Open Mercato app + database for manual QA or MCP-based exploration.
+title: yarn test:ephemeral:start
+sidebar_label: yarn test:ephemeral:start
+description: Starts a disposable Open Mercato app + database for manual QA, MCP-based exploration, or the agentic e2e suite.
 ---
 
-`yarn test:integration:ephemeral:start` executes `yarn mercato test:ephemeral`.
+`yarn test:ephemeral:start` executes `yarn mercato test:ephemeral`.
 
-This command boots an isolated environment and keeps it running until you stop it with `Ctrl+C`.
-
-For short integration-development loops, prefer `yarn test:integration:ephemeral:interactive` so you can run many tests without repeated bootstrap.
+This command boots an isolated environment and keeps it running until you stop it with `Ctrl+C`. It is the app the agentic e2e suite under `e2e/` runs against; read `e2e/README.md` for the suite itself.
 
 ## Usage
 
 ```bash
 # Preferred script
-yarn test:integration:ephemeral:start
+yarn test:ephemeral:start
 
 # Direct CLI command (alias form)
 yarn mercato test:ephemeral
@@ -28,21 +26,22 @@ yarn mercato test ephemeral
 | Option | Description |
 | --- | --- |
 | `--verbose` | Shows detailed bootstrap/build logs. |
-| `--screenshots` | Enables screenshot capture for Playwright sessions. |
-| `--no-screenshots` | Disables screenshot capture for Playwright sessions. |
 | `--no-reuse-env` | Forces a brand-new ephemeral environment instead of attaching to an existing one. |
 
 ## Examples
 
 ```bash
 # Start ephemeral environment for manual QA
-yarn test:integration:ephemeral:start
+yarn test:ephemeral:start
 
 # Start with verbose setup logs
-yarn mercato test:ephemeral --verbose
+yarn test:ephemeral:start:verbose
 
 # Always start a fresh instance on an isolated port
 yarn mercato test:ephemeral --no-reuse-env
+
+# Run the agentic e2e suite against it
+cd e2e && APP_URL=http://127.0.0.1:5001 npm test
 ```
 
 ## Runtime Output

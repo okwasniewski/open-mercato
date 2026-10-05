@@ -36,8 +36,8 @@ export function legacyCheckoutPredicate(): string {
 }
 
 /**
- * The exact UPDATE the migration runs. Exported so the DB-level regression test
- * (`__integration__/TC-WF-031`) executes the identical SQL against Postgres,
+ * The exact UPDATE the migration runs. Exported so a DB-level regression test
+ * (`TC-WF-031`) can execute the identical SQL against Postgres,
  * making the jsonb transformation itself — not just its rendered string —
  * the thing under test.
  *

@@ -808,11 +808,10 @@ Treat a regression here as a broken feature, not a nit.
 - **The `sr-only` status name means a card's TEXT no longer identifies the step**, so a node's own
   label carries `data-slot="workflow-node-title"` (`WORKFLOW_NODE_TITLE_SLOT`, set by
   `WorkflowNodeCard` in both variants and by `StartNode`'s trigger-card branch, which renders its own
-  title). In the editor every status name is "Not started", and Playwright's `hasText` is a
-  case-insensitive SUBSTRING match, so a whole-card match for a step called "Start" resolved to EVERY
-  node on the canvas — plus the START card's cap says "manual / API start". Address the title element
-  (`workflowNodeByTitle` in `packages/core/src/helpers/integration/workflowsUi.ts`) rather than the
-  card, and MUST NOT drop the slot from a node component that renders its own title.
+  title). In the editor every status name is "Not started", and a substring text match for a step
+  called "Start" resolves to EVERY node on the canvas - plus the START card's cap says "manual / API
+  start". E2E locators must address the title element rather than the card, and MUST NOT drop the
+  slot from a node component that renders its own title.
 
 ## Step & Route Inspector
 

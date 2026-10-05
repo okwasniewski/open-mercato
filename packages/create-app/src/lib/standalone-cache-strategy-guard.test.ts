@@ -4,13 +4,12 @@ import path from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 
-// The standalone integration lanes run the app server and the queue-drain
-// helpers in SEPARATE processes (AUTO_SPAWN_WORKERS=false): mutations applied
-// by a drained job can only invalidate the server's ENABLE_CRUD_API_CACHE
-// entries when the cache store is shared across processes. A per-process
-// `memory` strategy makes the server serve stale records forever after a
-// drained job mutates them (TC-CRM-079 owner reassignment, TC-SX-001 import
-// update). These guards fail the moment either lane regresses to a
+// The standalone lanes run the app server and the queue-drain helpers in
+// SEPARATE processes (AUTO_SPAWN_WORKERS=false): mutations applied by a
+// drained job can only invalidate the server's ENABLE_CRUD_API_CACHE entries
+// when the cache store is shared across processes. A per-process `memory`
+// strategy makes the server serve stale records forever after a drained job
+// mutates them. These guards fail the moment either lane regresses to a
 // process-local cache strategy — or drops the strategy entirely, because the
 // cache service defaults to `memory` when CACHE_STRATEGY is unset.
 
@@ -38,8 +37,8 @@ function assertWorkflowUsesSharedCache(relativePath: string): void {
   const values = collectCacheStrategyValues(workflow)
   assert.equal(
     values.length,
-    2,
-    `${relativePath} must pin CACHE_STRATEGY once for the standalone app .env and once for the integration-test step`,
+    1,
+    `${relativePath} must pin CACHE_STRATEGY for the standalone app .env`,
   )
   for (const value of values) {
     assert.ok(
@@ -51,11 +50,8 @@ function assertWorkflowUsesSharedCache(relativePath: string): void {
   const sqlitePaths = collectSqlitePaths(workflow)
   assert.deepEqual(
     sqlitePaths,
-    [
-      '/tmp/standalone-app/.mercato/cache/cache.db',
-      '/tmp/standalone-app/.mercato/cache/cache.db',
-    ],
-    `${relativePath} must give the standalone server and queue-drain child processes the same absolute sqlite path`,
+    ['/tmp/standalone-app/.mercato/cache/cache.db'],
+    `${relativePath} must give the standalone server an absolute sqlite path`,
   )
 }
 
@@ -68,12 +64,12 @@ test('published standalone workflows share cache state across server and drain p
   }
 })
 
-test('local standalone integration script uses a cross-process cache strategy', () => {
+test('local standalone parity script uses a cross-process cache strategy', () => {
   const script = readRepoFile('scripts/test-create-app-integration.ts')
   const values = collectCacheStrategyValues(script)
   assert.ok(
     values.length >= 2,
-    'test-create-app-integration.ts must pin CACHE_STRATEGY for both the standalone app .env and the integration-test process env',
+    'test-create-app-integration.ts must pin CACHE_STRATEGY for both the standalone app .env and the ephemeral runner process env',
   )
   for (const value of values) {
     assert.ok(

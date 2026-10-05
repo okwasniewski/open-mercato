@@ -673,7 +673,7 @@ describe('status-map', () => {
 
 ### 10.2 Integration Tests
 
-Place in `__integration__/` directory following the integration-tests skill pattern:
+Cover these with Jest against mocked SDK calls; when the provider ships an admin UI flow, add a scenario to `e2e/tests/` following the `om-integration-tests` skill:
 
 | Test Case | Description |
 |-----------|-------------|

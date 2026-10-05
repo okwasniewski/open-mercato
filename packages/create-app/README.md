@@ -390,9 +390,9 @@ If you want to keep the smoke test non-interactive:
 yarn test:create-app --no-shell
 ```
 
-### Full standalone integration parity
+### Full standalone build parity
 
-To run the same ephemeral standalone integration flow used for CI-style parity checks:
+To run the same ephemeral standalone build-and-boot flow used for CI-style parity checks:
 
 ```bash
 yarn test:create-app:integration
@@ -403,9 +403,9 @@ What it does:
 - republishes the current branch packages to Verdaccio
 - scaffolds a temporary standalone app configured for that registry
 - installs the standalone app from Verdaccio, including enterprise for the parity run
-- runs the standalone app's ephemeral integration suite via `yarn test:integration:ephemeral`
+- builds the scaffold twice (runtime-disabled baseline, then with the example module activated) and boots it through `yarn mercato test:ephemeral`
 
-This command requires Docker because the ephemeral integration environment boots the standalone app and its services.
+This command requires Docker because the ephemeral environment boots the standalone app and its services.
 
 ### Manual Verdaccio workflow
 

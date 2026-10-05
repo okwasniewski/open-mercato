@@ -354,7 +354,7 @@ agent_orchestrator/
 ├── backend/{overview,agents,playground,caseload,processes,traces,audit}/
 ├── components/  commands/  workers/  migrations/  i18n/
 ├── agents/<id>/  skills/  examples/  generated/file-agents.generated.ts
-└── __tests__/  __integration__/
+└── __tests__/
 ```
 
 ## Cross-References

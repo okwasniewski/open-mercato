@@ -66,9 +66,8 @@ export function warnPushFakeProvidersActive(provider: FakePushProvider): void {
  * all agree, so every caller goes through this: `QUEUE_BASE_DIR` when set (the harness always sets it,
  * and `drainIntegrationQueue` propagates it to its child), else `<appRoot>/.mercato/queue`.
  *
- * In the app/worker process `cwd` IS the app root. The Playwright process runs from the repo root, so
- * `helpers/integration/pushFake` sets `QUEUE_BASE_DIR` before anything reads it — this fallback is never
- * reached there.
+ * In the app/worker process `cwd` IS the app root. A test process running from the repo root must set
+ * `QUEUE_BASE_DIR` before anything reads it - this fallback is never reached there.
  */
 export function resolveQueueBaseDir(): string {
   const explicit = process.env.QUEUE_BASE_DIR?.trim()

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "moduleId": "example",
-  "generatedNote": "Finite capability inventory for the canonical `example` reference module. Paths are app-root-relative and resolve identically in the monorepo app (apps/mercato/), the create-app template mirror (packages/create-app/template/), and an emitted standalone app. `readStatus` is derived: `readable` only when `referenceStatus` is `canonical` AND `coverageKind` is `example`. `sourcePaths` never contains `__tests__/**` or `__integration__/**` — those appear only under `integrationTestPaths` as repository-only evidence (scaffolding filters them out of emitted apps). READ THAT FIELD NAME CAREFULLY: it holds BOTH unit (`__tests__/**`) and integration (`__integration__/**`) evidence, so a row whose entries are all `__tests__/**` has NO integration coverage — it is proven by unit tests only. A populated `integrationTestPaths` is not proof that an integration spec exists. No line anchors, no directory-only entries, no wildcards. Rows marked `qa-only` failed the reference-quality gate documented in ../README.md and carry an exact `qaOnlyReason`. This inventory covers only surfaces that exist TODAY; verified gaps land with their own slices.",
+  "generatedNote": "Finite capability inventory for the canonical `example` reference module. Paths are app-root-relative and resolve identically in the monorepo app (apps/mercato/), the create-app template mirror (packages/create-app/template/), and an emitted standalone app. `readStatus` is derived: `readable` only when `referenceStatus` is `canonical` AND `coverageKind` is `example`. `sourcePaths` never contains `__tests__/**` - those appear only under `integrationTestPaths` as repository-only unit-test evidence (scaffolding filters them out of emitted apps). The field holds unit tests only: browser and API scenarios live in the repository e2e suite under `e2e/` and are not tracked per capability here. No line anchors, no directory-only entries, no wildcards. Rows marked `qa-only` failed the reference-quality gate documented in ../README.md and carry an exact `qaOnlyReason`. This inventory covers only surfaces that exist TODAY; verified gaps land with their own slices.",
   "factCoverage": {
     "generatedNote": "Enum-derived coverage ledger for the PR #4883 module-fact and override-target contract. The `families` array below is a VERBATIM MIRROR of what `buildModuleFactCoverageLedger()` (packages/cli/src/lib/generators/module-facts.ts) builds from the exported `as const` ledgers MODULE_FACT_SOURCE_KINDS, MODULE_OWNED_CONTRACT_KINDS, ALL_OVERRIDE_DOMAINS, MODULE_OVERRIDE_MODES, MODULE_OVERRIDE_TARGET_NOTES and MODULE_OVERRIDE_TARGET_DIAGNOSTIC_CODES; each family's `enumSource` names the file and symbol it is derived from, and module-facts.example-fact-coverage.test.ts resolves that symbol and fails if this copy drifts from the built ledger. Every value of every family carries exactly one row: a value with no row, or a row for a value the enum no longer carries, throws from `buildModuleFactCoverageLedger()`, which `extractAllModuleFacts()` calls on every run — so it fails fact generation, not only the test. STATUS IS NOT PROOF ON ITS OWN: `emitted-example` rows are verified against a real extraction of the example module by that test, which asserts a non-zero real count. `pending-emission` means the spec REQUIRES emission but the example does not emit it yet — the `pendingEmission` field names the slice that owns closing the gap, and the test asserts the real count is still zero so the claim cannot go stale. `negative-fixture` means only a deliberately broken fixture produces it; the test asserts a real fixture exists for each such row. `currently-unbound` means the value is reserved by the closed public set but no code path emits it, so not even a fixture can produce it. `framework-only` means an app-level setting that never becomes a module contribution. `catalog-only` means the framework catalog describes the surface but the example contributes nothing for it; the test asserts a real count of zero for every row carrying it. A row carrying `requiresGeneratedRegistry` is extractable only from the generated module registry, so a source-only extraction reports zero for it legitimately — and because that flag is the only skip out of the non-zero proof, the test proves the flag itself: every row carrying it must count zero from a source-only extraction AND non-zero once the same extraction is given a module registry.",
     "families": [
@@ -1224,8 +1224,7 @@
         "src/modules/example/lib/exampleSeeds.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/setup-seeding.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-010-setup-seeding.spec.ts"
+        "src/modules/example/__tests__/setup-seeding.test.ts"
       ],
       "dependencyModules": [
         "entities"
@@ -1244,10 +1243,7 @@
         "src/modules/example/lib/todoSummaryService.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/di-registration.test.ts",
-        "src/modules/example/__integration__/TC-UMES-005.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-020.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-007-cache.spec.ts"
+        "src/modules/example/__tests__/di-registration.test.ts"
       ],
       "dependencyModules": [
         "payment_gateways",
@@ -1272,8 +1268,7 @@
       "integrationTestPaths": [
         "src/modules/example/lib/__tests__/todoSummaryCache.test.ts",
         "src/modules/example/__tests__/invalidate-todo-summary.test.ts",
-        "src/modules/example/api/__tests__/todos.summary.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-007-cache.spec.ts"
+        "src/modules/example/api/__tests__/todos.summary.test.ts"
       ],
       "dependencyModules": [],
       "ruleOwner": "om-module-scaffold"
@@ -1288,9 +1283,7 @@
       "sourcePaths": [
         "src/modules/example/cli.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-011.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "entities"
       ],
@@ -1309,9 +1302,7 @@
         "src/modules/example/i18n/es.json",
         "src/modules/example/i18n/pl.json"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-APP-001-metadata.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [],
       "ruleOwner": "om-module-scaffold"
     },
@@ -1326,8 +1317,7 @@
         "src/modules/example/translations.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/translations.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-009-translations.spec.ts"
+        "src/modules/example/__tests__/translations.test.ts"
       ],
       "dependencyModules": [
         "translations"
@@ -1358,9 +1348,7 @@
       "sourcePaths": [
         "src/modules/example/data/validators.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/todo-priority-validation.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [],
       "ruleOwner": "om-data-model-design"
     },
@@ -1374,10 +1362,7 @@
       "sourcePaths": [
         "src/modules/example/ce.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/todo-priority-validation.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "entities"
       ],
@@ -1414,8 +1399,7 @@
       ],
       "integrationTestPaths": [
         "src/modules/example/__tests__/encryption-search-contract.test.ts",
-        "src/modules/example/commands/__tests__/todos.notes-encryption.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-004-encryption.spec.ts"
+        "src/modules/example/commands/__tests__/todos.notes-encryption.test.ts"
       ],
       "dependencyModules": [
         "entities"
@@ -1433,8 +1417,7 @@
         "src/modules/example/data/extensions.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/entity-extensions.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-005-extension-links.spec.ts"
+        "src/modules/example/__tests__/entity-extensions.test.ts"
       ],
       "dependencyModules": [
         "customers"
@@ -1452,8 +1435,7 @@
         "src/modules/example/search.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/encryption-search-contract.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-006-search.spec.ts"
+        "src/modules/example/__tests__/encryption-search-contract.test.ts"
       ],
       "dependencyModules": [
         "query_index"
@@ -1471,8 +1453,7 @@
         "src/modules/example/vector.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/specialized-registries.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-015-specialized-registries.spec.ts"
+        "src/modules/example/__tests__/specialized-registries.test.ts"
       ],
       "dependencyModules": [
         "search",
@@ -1508,10 +1489,7 @@
       "sourcePaths": [
         "src/modules/example/api/customer-priorities/route.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-021.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "customers"
       ],
@@ -1528,9 +1506,6 @@
         "src/modules/example/api/todos/route.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-002-query-index-failure.spec.ts",
-        "src/modules/example/__integration__/todo-priority-validation.spec.ts",
         "src/modules/example/api/__tests__/todos.request-scope.test.ts"
       ],
       "dependencyModules": [
@@ -1599,9 +1574,7 @@
       "sourcePaths": [
         "src/modules/example/api/interceptors.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "customers"
       ],
@@ -1619,8 +1592,7 @@
       ],
       "integrationTestPaths": [
         "src/modules/example/commands/__tests__/todos.update.test.ts",
-        "src/modules/example/commands/__tests__/todos.prepare-scope.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts"
+        "src/modules/example/commands/__tests__/todos.prepare-scope.test.ts"
       ],
       "dependencyModules": [],
       "ruleOwner": "om-data-model-design"
@@ -1651,9 +1623,7 @@
       "sourcePaths": [
         "src/modules/example/commands/interceptors.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-006-mutation-lifecycle.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "customers"
       ],
@@ -1669,9 +1639,7 @@
       "sourcePaths": [
         "src/modules/example/events.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-003.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "events"
       ],
@@ -1687,9 +1655,7 @@
       "sourcePaths": [
         "src/modules/example/commands/todos.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-002-query-index-failure.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "query_index",
         "events"
@@ -1708,9 +1674,7 @@
         "src/modules/example/subscribers/prevent-uncomplete.ts",
         "src/modules/example/subscribers/audit-delete.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-006-mutation-lifecycle.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "events"
       ],
@@ -1744,8 +1708,7 @@
         "src/modules/example/subscribers/announce-todo-to-portal.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/announce-todo-to-portal.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-012-extension-topology.spec.ts"
+        "src/modules/example/__tests__/announce-todo-to-portal.test.ts"
       ],
       "dependencyModules": [
         "events",
@@ -1781,9 +1744,7 @@
         "src/modules/example/components/TodosTable.tsx",
         "src/modules/example/types.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [],
       "ruleOwner": "om-backend-ui-design"
     },
@@ -1797,9 +1758,7 @@
       "sourcePaths": [
         "src/modules/example/components/TodosTable.tsx"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [],
       "ruleOwner": "om-backend-ui-design"
     },
@@ -1815,10 +1774,7 @@
         "src/modules/example/backend/todos/create/page.meta.ts",
         "src/modules/example/components/TodoForm.tsx"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-011-form-locking.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [],
       "ruleOwner": "om-backend-ui-design"
     },
@@ -1834,10 +1790,7 @@
         "src/modules/example/backend/todos/[id]/edit/page.meta.ts",
         "src/modules/example/components/TodoForm.tsx"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-011-form-locking.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [],
       "ruleOwner": "om-backend-ui-design"
     },
@@ -1866,8 +1819,7 @@
         "src/modules/example/backend/middleware.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/backend-middleware.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-013-page-middleware.spec.ts"
+        "src/modules/example/__tests__/backend-middleware.test.ts"
       ],
       "dependencyModules": [],
       "ruleOwner": "om-system-extension"
@@ -1883,8 +1835,7 @@
         "src/modules/example/frontend/middleware.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/frontend-middleware.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-013-page-middleware.spec.ts"
+        "src/modules/example/__tests__/frontend-middleware.test.ts"
       ],
       "dependencyModules": [],
       "ruleOwner": "om-system-extension"
@@ -1899,9 +1850,7 @@
       "sourcePaths": [
         "src/modules/example/data/guards.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-006-mutation-lifecycle.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [],
       "ruleOwner": "om-system-extension"
     },
@@ -1915,10 +1864,7 @@
       "sourcePaths": [
         "src/modules/example/data/enrichers.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-002.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-012.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "customers"
       ],
@@ -1935,8 +1881,7 @@
         "src/modules/example/extension-points.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/extension-points.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-017-bound-extension-ui.spec.ts"
+        "src/modules/example/__tests__/extension-points.test.ts"
       ],
       "dependencyModules": [],
       "ruleOwner": "om-system-extension"
@@ -1952,8 +1897,7 @@
         "src/modules/example/widgets/injection-table.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/widgets/__tests__/injection-table.test.ts",
-        "src/modules/example/__integration__/TC-UMES-001.spec.ts"
+        "src/modules/example/widgets/__tests__/injection-table.test.ts"
       ],
       "dependencyModules": [
         "customers",
@@ -1973,9 +1917,7 @@
       "sourcePaths": [
         "src/modules/example/widgets/injection/customer-priority-field/widget.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "customers"
       ],
@@ -1991,9 +1933,7 @@
       "sourcePaths": [
         "src/modules/example/widgets/injection/customer-priority-column/widget.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "customers"
       ],
@@ -2009,9 +1949,7 @@
       "sourcePaths": [
         "src/modules/example/widgets/injection/customer-priority-filter/widget.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "customers"
       ],
@@ -2027,9 +1965,7 @@
       "sourcePaths": [
         "src/modules/example/widgets/injection/customer-priority-row-action/widget.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "customers"
       ],
@@ -2045,9 +1981,7 @@
       "sourcePaths": [
         "src/modules/example/widgets/injection/customer-priority-bulk-actions/widget.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "customers"
       ],
@@ -2071,8 +2005,7 @@
         "src/modules/example/lib/__tests__/todoBulkComplete.test.ts",
         "src/modules/example/lib/__tests__/todoBulkComplete.loop.test.ts",
         "src/modules/example/api/__tests__/todos.bulk-complete.test.ts",
-        "src/modules/example/widgets/__tests__/todo-bulk-complete.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-003-todo-bulk-progress.spec.ts"
+        "src/modules/example/widgets/__tests__/todo-bulk-complete.test.ts"
       ],
       "dependencyModules": [
         "progress",
@@ -2111,10 +2044,7 @@
         "src/modules/example/widgets/injection/example-menus/widget.ts",
         "src/modules/example/widgets/injection/example-profile-menu/widget.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-001.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-003.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [],
       "ruleOwner": "om-system-extension"
     },
@@ -2129,9 +2059,7 @@
         "src/modules/example/widgets/injection/customer-priority-detail/widget.ts",
         "src/modules/example/widgets/injection/customer-priority-detail/widget.client.tsx"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "customers"
       ],
@@ -2152,9 +2080,7 @@
       ],
       "integrationTestPaths": [
         "src/modules/example/widgets/__tests__/components.test.ts",
-        "src/modules/example/widgets/__tests__/component-override-modes.test.ts",
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-017-bound-extension-ui.spec.ts"
+        "src/modules/example/widgets/__tests__/component-override-modes.test.ts"
       ],
       "dependencyModules": [],
       "ruleOwner": "om-system-extension"
@@ -2188,10 +2114,7 @@
       "sourcePaths": [
         "src/modules/example/notifications.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-008.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-008-notification-renderer.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "notifications"
       ],
@@ -2207,9 +2130,7 @@
       "sourcePaths": [
         "src/modules/example/notifications.handlers.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-008.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "notifications"
       ],
@@ -2226,8 +2147,7 @@
         "src/modules/example/notifications.client.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/notifications.client.test.tsx",
-        "src/modules/example/__integration__/TC-EXAMPLE-008-notification-renderer.spec.ts"
+        "src/modules/example/__tests__/notifications.client.test.tsx"
       ],
       "dependencyModules": [
         "notifications"
@@ -2245,9 +2165,7 @@
         "src/modules/example/message-objects.ts",
         "src/modules/example/lib/messageObjectPreviews.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-003.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [
         "messages"
       ],
@@ -2268,9 +2186,7 @@
       "integrationTestPaths": [
         "src/modules/example/lib/__tests__/mock-gateway-adapter.test.ts",
         "src/modules/example/lib/__tests__/mock-shipping-adapter.test.ts",
-        "src/modules/example/lib/__tests__/mock-webhook-endpoint-adapter.test.ts",
-        "src/modules/example/__integration__/TC-UMES-005.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-020.spec.ts"
+        "src/modules/example/lib/__tests__/mock-webhook-endpoint-adapter.test.ts"
       ],
       "dependencyModules": [
         "payment_gateways",
@@ -2292,8 +2208,7 @@
         "src/modules/example/lib/mock-currency-rate-provider.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/specialized-registries.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-015-specialized-registries.spec.ts"
+        "src/modules/example/__tests__/specialized-registries.test.ts"
       ],
       "dependencyModules": [
         "integrations",
@@ -2314,8 +2229,7 @@
         "src/modules/example/workflows.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/specialized-registries.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-015-specialized-registries.spec.ts"
+        "src/modules/example/__tests__/specialized-registries.test.ts"
       ],
       "dependencyModules": [
         "workflows",
@@ -2333,9 +2247,7 @@
       "sourcePaths": [
         "src/modules.ts"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-022-overrides.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "dependencyModules": [],
       "ruleOwner": "om-system-extension"
     },
@@ -2366,8 +2278,7 @@
         "src/modules/example/ai-tools.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/ai-tools.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-014-ai-contracts.spec.ts"
+        "src/modules/example/__tests__/ai-tools.test.ts"
       ],
       "dependencyModules": [
         "ai_assistant"
@@ -2385,8 +2296,7 @@
         "src/modules/example/ai-agents.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/ai-agents.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-014-ai-contracts.spec.ts"
+        "src/modules/example/__tests__/ai-agents.test.ts"
       ],
       "dependencyModules": [
         "ai_assistant"
@@ -2404,8 +2314,7 @@
         "src/modules/example/ai-agents.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/ai-agents.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-014-ai-contracts.spec.ts"
+        "src/modules/example/__tests__/ai-agents.test.ts"
       ],
       "dependencyModules": [
         "ai_assistant",
@@ -2424,8 +2333,7 @@
         "src/modules/example/ai-tools.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/ai-overrides.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-014-ai-contracts.spec.ts"
+        "src/modules/example/__tests__/ai-overrides.test.ts"
       ],
       "dependencyModules": [
         "ai_assistant"
@@ -2443,8 +2351,7 @@
         "src/modules/example/ai-agents.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__tests__/ai-overrides.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-014-ai-contracts.spec.ts"
+        "src/modules/example/__tests__/ai-overrides.test.ts"
       ],
       "dependencyModules": [
         "ai_assistant"
@@ -2464,8 +2371,7 @@
         "src/modules/example/lib/module-reference-index.ts"
       ],
       "integrationTestPaths": [
-        "src/modules/example/lib/__tests__/module-reference-index.test.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-016-generator-plugin.spec.ts"
+        "src/modules/example/lib/__tests__/module-reference-index.test.ts"
       ],
       "dependencyModules": [],
       "ruleOwner": "om-module-scaffold"
@@ -2473,26 +2379,12 @@
     {
       "capabilityId": "testing.integration-coverage",
       "title": "Module integration and unit coverage",
-      "description": "Repository-only Playwright and unit suites for the module. Standalone scaffolding filters `__tests__/**` and `__integration__/**` out of emitted apps, so these are evidence paths, never readable emitted source. Follow the testing guide for how to write your own.",
+      "description": "Repository-only unit suites for the module. Standalone scaffolding filters `__tests__/**` out of emitted apps, so these are evidence paths, never readable emitted source. Follow the testing guide for how to write your own.",
       "coverageKind": "specialist-route",
       "referenceStatus": "canonical",
       "readStatus": "qa-only",
       "sourcePaths": [],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/meta.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-002-query-index-failure.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-015-specialized-registries.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-016-generator-plugin.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-001.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-002.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-003.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-005.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-006-mutation-lifecycle.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-012.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-022-overrides.spec.ts",
-        "src/modules/example/__integration__/todo-priority-validation.spec.ts",
         "src/modules/example/__tests__/acl-dependencies.test.ts",
         "src/modules/example/__tests__/extension-points.test.ts",
         "src/modules/example/__tests__/notifications.client.test.tsx",

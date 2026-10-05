@@ -1542,63 +1542,15 @@ export async function run(argv = process.argv) {
   let cmdName = second
   let rest = remaining
 
-  if (first === 'test:integration') {
-    modName = 'test'
-    cmdName = 'integration'
-    rest = second !== undefined ? [second, ...remaining] : []
-  }
-
   if (first === 'test:ephemeral') {
     modName = 'test'
     cmdName = 'ephemeral'
     rest = second !== undefined ? [second, ...remaining] : []
   }
 
-  if (first === 'test:integration:interactive') {
-    modName = 'test'
-    cmdName = 'interactive'
-    rest = second !== undefined ? [second, ...remaining] : []
-  }
-
-  if (first === 'test:integration:coverage') {
-    modName = 'test'
-    cmdName = 'coverage'
-    rest = second !== undefined ? [second, ...remaining] : []
-  }
-
-  if (first === 'test:integration:spec-coverage') {
-    modName = 'test'
-    cmdName = 'spec-coverage'
-    rest = second !== undefined ? [second, ...remaining] : []
-  }
-
-  if (first === 'test' && second === 'integration') {
-    modName = 'test'
-    cmdName = 'integration'
-    rest = remaining
-  }
-
   if (first === 'test' && second === 'ephemeral') {
     modName = 'test'
     cmdName = 'ephemeral'
-    rest = remaining
-  }
-
-  if (first === 'test' && second === 'interactive') {
-    modName = 'test'
-    cmdName = 'interactive'
-    rest = remaining
-  }
-
-  if (first === 'test' && second === 'coverage') {
-    modName = 'test'
-    cmdName = 'coverage'
-    rest = remaining
-  }
-
-  if (first === 'test' && second === 'spec-coverage') {
-    modName = 'test'
-    cmdName = 'spec-coverage'
     rest = remaining
   }
 
@@ -2616,33 +2568,9 @@ export async function run(argv = process.argv) {
     id: 'test',
     cli: [
       {
-        command: 'integration',
-        run: async (args: string[]) => {
-          await (await lazyIntegration()).runIntegrationTestsInEphemeralEnvironment(args)
-        },
-      },
-      {
         command: 'ephemeral',
         run: async (args: string[]) => {
           await (await lazyIntegration()).runEphemeralAppForQa(args)
-        },
-      },
-      {
-        command: 'interactive',
-        run: async (args: string[]) => {
-          await (await lazyIntegration()).runInteractiveIntegrationInEphemeralEnvironment(args)
-        },
-      },
-      {
-        command: 'coverage',
-        run: async (args: string[]) => {
-          await (await lazyIntegration()).runIntegrationCoverageReport(args)
-        },
-      },
-      {
-        command: 'spec-coverage',
-        run: async (args: string[]) => {
-          await (await lazyIntegration()).runIntegrationSpecCoverageReport(args)
         },
       },
     ],

@@ -3,8 +3,7 @@
  *
  * Iterates every tool registered in `ai-tools.generated.ts`, invokes the
  * handler against a super-admin tenant context, and returns a structured
- * report. Used by the `mercato ai_assistant test-tools` CLI subcommand and
- * by `.ai/qa/tests/integration/TC-INT-AI-TOOLS.spec.ts`.
+ * report. Used by the `mercato ai_assistant test-tools` CLI subcommand.
  *
  * Safety posture:
  *   - No HTTP exposure — runs only inside the Node process driving the CLI.

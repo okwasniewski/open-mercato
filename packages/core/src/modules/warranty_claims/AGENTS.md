@@ -46,4 +46,4 @@ yarn generate
 yarn i18n:check-sync
 ```
 
-Integration coverage lives under `packages/core/src/modules/warranty_claims/__integration__/TC-WC-*.spec.ts`; run the relevant `TC-WC-*` scenario when changing API or portal behavior.
+Browser and API coverage lives in the repository e2e suite under `e2e/` (`cd e2e && npm test`, see `e2e/README.md`); run the relevant scenario when changing API or portal behavior.

@@ -124,7 +124,7 @@ yarn registry:setup-user
 # Smoke-test the standalone scaffold against Verdaccio
 yarn test:create-app
 
-# Run the standalone integration parity flow against Verdaccio
+# Run the standalone build-and-boot parity flow against Verdaccio
 yarn test:create-app:integration
 ```
 

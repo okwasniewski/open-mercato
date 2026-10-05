@@ -3,48 +3,37 @@ name: om-smart-test
 description: Run only the tests affected by changed code. Use when the user says "run affected tests", "run smart tests", "test only what changed", "run tests for this PR", "run tests for my changes", "selective tests", or asks to run tests without running the full suite.
 ---
 
-# Smart Test — Run Only Affected Tests
+# Smart Test - Run Only Affected Tests
 
 Runs the minimal set of tests that cover the code changes in the current branch or working tree.
 
-**Execution policy**: Display the test plan (which tests will run and why), then **immediately run them without asking for confirmation**.
+**Execution policy**: display the plan (which tests run and why), then run them without asking.
 
-**Cache**: Analysis results are persisted to `.test-cache.json` (gitignored). On repeated invocations for the same commit with no uncommitted changes, the cached plan is reused — skip straight to running tests.
+**Cache**: the plan is persisted to `.test-cache.json` (gitignored). On a repeat invocation for the same commit with no uncommitted changes, the cached plan runs as is.
 
 ## Two Test Types, Two Strategies
 
 | Type | Files | Strategy |
 |------|-------|----------|
-| Jest (unit/component) | `*.test.ts`, `*.test.tsx` | `--findRelatedTests` (Jest traverses import graph) |
-| Playwright (integration) | `*.spec.ts` in `__integration__/` | Module-name matching via `meta.ts` dependency declarations |
+| Jest (unit/component) | `*.test.ts`, `*.test.tsx` | `--findRelatedTests` (Jest walks the import graph) |
+| e2e (browser) | `e2e/tests/<area>.e2e.ts` | Changed module -> area tag; run `npm test -- --tag <area>` inside `e2e/` |
 
 ---
 
-## Step 0 — Cache Lookup
-
-Before doing any git analysis, check whether a valid cached plan already exists for the current state.
+## Step 0 - Cache Lookup
 
 ```bash
 CURRENT_HASH=$(git rev-parse HEAD)
 UNCOMMITTED=$(git diff --name-only HEAD; git ls-files --others --exclude-standard)
 ```
 
-Read `.test-cache.json` (if it exists). The cache is **valid** when:
-1. `cache.commitHash` equals `CURRENT_HASH`, **and**
-2. `UNCOMMITTED` is empty (no staged/unstaged/untracked changes), **and**
-3. The commit is reachable from HEAD: `git merge-base --is-ancestor <cache.commitHash> HEAD 2>/dev/null` exits 0
+Read `.test-cache.json`. It is valid when `commitHash` equals `CURRENT_HASH`, `UNCOMMITTED` is empty, and `git merge-base --is-ancestor <cache.commitHash> HEAD` exits 0 (guards against rebase, amend, force-push).
 
-```bash
-git merge-base --is-ancestor "${cache.commitHash}" HEAD 2>/dev/null && echo "reachable" || echo "stale"
-```
+**Valid cache**: print `[cache hit: <hash>]`, skip Steps 1-2, and run:
+- Jest: `yarn jest --findRelatedTests <cache.jestSourceFiles> --passWithNoTests`
+- e2e: if `cache.e2eWide` is `true`, `npm test`; else one `npm test -- --tag <tag>` per entry in `cache.e2eTags`; else skip.
 
-Condition 3 guards against stale cache entries after a rebase, amend, or force-push. The old hash may still exist as a dangling object in the git store (`git cat-file -e` would return true), but it is no longer part of the branch history — `git merge-base --is-ancestor` correctly rejects it.
-
-**If cache is valid**: skip Steps 1–5, print `[cache hit: <hash>]`, and run tests from the cached plan:
-- **Jest**: `yarn jest --findRelatedTests <cache.jestSourceFiles> --passWithNoTests`
-- **Playwright**: if `cache.integrationWide` is `true` → `yarn test:integration`; else if `cache.integrationSpecFiles` is non-empty → `yarn playwright test <cache.integrationSpecFiles> --config=.ai/qa/tests/playwright.config.ts`; else skip.
-
-**If cache is invalid or missing**: continue to Step 1. After completing Steps 1–2, write the cache (see "Save Cache" below) before running tests.
+**Invalid or missing**: continue to Step 1 and save the plan after Step 2.
 
 ### Cache file format (`.test-cache.json`)
 
@@ -55,23 +44,15 @@ Condition 3 guards against stale cache entries after a rebase, amend, or force-p
   "scope": "module | wide | test-only | package",
   "layer": "ui | ui-component | api-logic | data | mixed",
   "affectedModules": ["auth", "sales"],
-  "jestSourceFiles": [
-    "packages/core/src/modules/auth/commands/users.ts"
-  ],
-  "integrationSpecFiles": [
-    "packages/core/src/modules/auth/__integration__/TC-AUTH-001.spec.ts"
-  ],
-  "integrationWide": false
+  "jestSourceFiles": ["packages/core/src/modules/auth/commands/users.ts"],
+  "e2eTags": ["auth", "sales"],
+  "e2eWide": false
 }
 ```
 
-`integrationWide: true` means the Python script returned `--all`; in that case `integrationSpecFiles` is empty and the full integration suite runs.
-
-`layer` values: `ui` = skip Playwright; `ui-component`, `api-logic`, `data`, or `mixed` = run Playwright.
+`layer` values: `ui` = skip e2e; `ui-component`, `api-logic`, `data`, `mixed` = run e2e.
 
 ### Save Cache
-
-After completing the analysis (Steps 1–2), write the plan before running tests:
 
 ```bash
 node -e "
@@ -83,8 +64,8 @@ const plan = {
   layer: '<ui|ui-component|api-logic|data|mixed>',
   affectedModules: <json-array-of-modules>,
   jestSourceFiles: <json-array>,
-  integrationSpecFiles: <json-array>,
-  integrationWide: <true|false>
+  e2eTags: <json-array>,
+  e2eWide: <true|false>
 };
 fs.writeFileSync('.test-cache.json', JSON.stringify(plan, null, 2));
 "
@@ -92,15 +73,11 @@ fs.writeFileSync('.test-cache.json', JSON.stringify(plan, null, 2));
 
 ---
 
-## Step 1 — Determine Changed Files
+## Step 1 - Determine Changed Files
 
-Build one changed-file list and reuse it for cache invalidation, classification, Jest, and
-Playwright mapping. Include PR diff, local staged/unstaged changes, and untracked files:
+Build one changed-file list and reuse it for cache invalidation, classification, Jest, and the e2e tag mapping. Include the PR diff, local changes, and untracked files.
 
-First resolve the comparison base. Do **not** guess `origin/main` when the branch is based on
-`develop`; comparing a develop-based branch to `origin/main` can pull in unrelated
-`packages/shared/` changes from the long-lived develop branch and incorrectly force the full
-suite.
+Resolve the comparison base first. Do not guess `origin/main` when the branch is based on `develop`; that can pull unrelated `packages/shared/` changes into the diff and force the full suite.
 
 ```bash
 BASE_REF="${SMART_TEST_BASE_REF:-}"
@@ -127,202 +104,116 @@ CHANGED_FILES=$({
 } | awk '!seen[$0]++')
 ```
 
-If `git diff --name-only origin/main...HEAD` contains `packages/shared/` but `$BASE_REF` is
-`origin/develop`/`develop` and the `$BASE_REF...HEAD` diff does not contain
-`packages/shared/`, do not classify the branch as wide-scope. Report it as a base-ref
-mismatch and use the resolved develop base.
-
-If there is no upstream PR context, use only local changes and untracked files:
-
-```bash
-CHANGED_FILES=$({
-  git diff --name-only HEAD
-  git ls-files --others --exclude-standard
-} | awk '!seen[$0]++')
-```
+If `git diff --name-only origin/main...HEAD` contains `packages/shared/` but the resolved develop base diff does not, report a base-ref mismatch and keep the develop base; do not classify as wide scope.
 
 ---
 
-## Step 2 — Classify Scope and Layer
+## Step 2 - Classify Scope and Layer
 
-### 2a — Scope
+### 2a - Scope
 
-Read the changed file list and classify scope:
+- **Wide scope** (run everything): `packages/shared/`, `packages/events/`, `packages/queue/`, `packages/cache/`, root `jest.config.cjs`, `jest.setup.ts`, `tsconfig*.json`, root `package.json`, `turbo.json`
+- **UI-wide** (`packages/ui/src/backend/`): shared components on every backend page. Jest: `--findRelatedTests`; e2e: whole suite. For `packages/ui/src/primitives/` or `packages/ui/src/styles/` only, classify as `ui` layer instead (no e2e).
+- **Module-scoped**: `packages/*/src/modules/<module>/` or `apps/mercato/src/modules/<module>/`; extract `<module>`
+- **Package-scoped** (no module): `packages/<pkg>/src/lib/` or `packages/<pkg>/src/` root; wide scope for that package
+- **Jest-test-only**: only `.test.ts`/`.test.tsx` changed; run those files, skip e2e
+- **e2e-test-only**: only files under `e2e/` changed; run the changed `e2e/tests/*.e2e.ts` files (`npm test -- <file>`), or the whole suite when `e2e.config.ts` or `tests/support/` changed; skip Jest
 
-- **Wide scope** (run everything): changes in `packages/shared/`, `packages/events/`, `packages/queue/`, `packages/cache/`, root `jest.config.cjs`, `jest.setup.ts`, `tsconfig*.json`
-- **UI-wide** (`packages/ui/src/backend/`): shared React components rendered on every backend page — Jest: `--findRelatedTests`; Playwright: full suite (the Python script outputs `--all` for these paths). For `packages/ui/src/primitives/` or `packages/ui/src/styles/` only, classify as `ui` layer instead (no Playwright).
-- **Module-scoped**: `packages/*/src/modules/<module>/` or `apps/mercato/src/modules/<module>/` → extract `<module>`
-- **Package-scoped** (no module): `packages/<pkg>/src/lib/` or `packages/<pkg>/src/` root — treat as wide scope for that package
-- **Jest-test-only**: only `.test.ts`/`.test.tsx` files changed → run those files directly via Jest; skip Playwright
-- **Playwright-test-only**: only `.spec.ts` files inside `__integration__/` changed → run those files directly via `yarn playwright test <files> --config=.ai/qa/tests/playwright.config.ts`; skip Jest
+See `references/test-architecture.md` for module extraction and the module-to-tag map.
 
-See `references/test-architecture.md` for module extraction patterns and known cross-module integration dependencies.
+### 2b - Layer (decides whether e2e runs)
 
-### 2b — Layer (determines whether Playwright runs)
+| Layer | Path indicators | e2e needed? |
+|-------|----------------|-------------|
+| `ui` | `**/*.css`, `packages/ui/src/primitives/`, `packages/ui/src/styles/` | No |
+| `ui-component` | `packages/ui/src/backend/**/*.tsx`, `/components/`, `/widgets/`, `/frontend/`, `/backend/**/*.tsx` (Next.js pages) | Yes: the agent drives full pages; a broken render or a renamed button changes the flow |
+| `api-logic` | `/api/`, `/commands/`, `/lib/`, `/services/`, `/subscribers/`, `/workers/`, `events.ts`, `notifications.ts`, `ai-tools.ts` | Yes |
+| `data` | `/data/entities`, `/data/migrations`, `/data/validators`, `/data/extensions`, `/data/enrichers` | Yes |
 
-After determining scope, classify the **layer** of each changed source file. Integration (Playwright) tests only need to run when backend logic or data is touched — they are irrelevant for pure UI changes.
+Decision rule, set `$LAYER`:
+- All files `ui` -> `LAYER=ui`, skip e2e
+- Any `data` -> `LAYER=data`
+- Any `api-logic` (none `data`) -> `LAYER=api-logic`
+- Any `ui-component` (none `api-logic`/`data`) -> `LAYER=ui-component`
+- Several non-`ui` layers -> `LAYER=mixed`
+- Wide scope -> run everything
 
-**Classify each changed file:**
+Special cases: module `backend/page.tsx` is `ui-component`; `api/GET/route.ts` is `api-logic`.
 
-| Layer | Path indicators | Playwright needed? |
-|-------|----------------|--------------------|
-| `ui` | `**/*.css` · `packages/ui/src/primitives/` · `packages/ui/src/styles/` | **No** |
-| `ui-component` | `packages/ui/src/backend/**/*.tsx` · `/components/` · `/widgets/` · `/frontend/` · `/backend/**/*.tsx` (Next.js pages) | **Yes** — Playwright renders full pages; a broken component can crash a page load or break a selector |
-| `api-logic` | `/api/` · `/commands/` · `/lib/` · `/services/` · `/subscribers/` · `/workers/` · `events.ts` · `notifications.ts` · `ai-tools.ts` | **Yes** |
-| `data` | `/data/entities` · `/data/migrations` · `/data/validators` · `/data/extensions` · `/data/enrichers` | **Yes** |
-
-**Layer decision rule — set `$LAYER` as a shell variable:**
-- All changed files → `ui` only (CSS / design tokens / primitives) → `LAYER=ui`, **skip Playwright**
-- Any file → `data` patterns → `LAYER=data`, **run Playwright**
-- Any file → `api-logic` patterns (and none match `data`) → `LAYER=api-logic`, **run Playwright**
-- Any file → `ui-component` patterns (and none match `api-logic` or `data`) → `LAYER=ui-component`, **run Playwright**
-- Files span multiple non-`ui` layers → `LAYER=mixed`, **run Playwright**
-- Wide scope always → **run everything**
-
-```bash
-LAYER="<ui|ui-component|api-logic|data|mixed>"  # required: used in Step 5 and cache
-```
-
-**Why `ui-component` needs Playwright**: integration tests render full pages. A React component that throws during render, a conditional that hides a button, or a changed DOM structure can all break Playwright selectors — even without touching any API.
-
-**Only skip Playwright when** the change cannot affect DOM structure or interactivity: pure CSS, design tokens, Tailwind config, color/spacing primitives.
-
-**Special cases:**
-- Module `backend/page.tsx`, `backend/[id]/page.tsx` — Next.js page files → `ui-component` (Playwright visits these pages)
-- Module `api/GET/route.ts`, `api/POST/route.ts` → API routes → `api-logic`
-
-→ **Save cache now** (see Step 0 — Save Cache, include `layer` field) before proceeding to run tests.
+Save the cache now (with `layer`, `e2eTags`, `e2eWide`).
 
 ---
 
-## Step 3 — Jest Unit Tests
-
-Use Jest's built-in `--findRelatedTests`. It traverses the import graph from changed source files and discovers every test that (directly or transitively) imports them.
+## Step 3 - Jest Unit Tests
 
 ```bash
-# Build the list of changed source files (exclude test files themselves)
 CHANGED=$(printf '%s\n' "$CHANGED_FILES" \
   | grep -E '\.(ts|tsx)$' \
   | grep -v '\.test\.' \
-  | grep -v '\.spec\.' \
   | grep -v '__tests__/' \
-  | grep -v '__integration__/' \
+  | grep -v '^e2e/' \
   | tr '\n' ' ')
 
-# Run related tests (passWithNoTests handles no-match gracefully)
 yarn jest --findRelatedTests $CHANGED --passWithNoTests
 ```
 
-**Wide scope fallback**: when `CHANGED` includes shared/events/queue/cache files, run the full Jest suite instead:
-
-```bash
-yarn test
-```
+Wide scope: `yarn test` instead.
 
 ---
 
-## Step 4 — Ensure Server Is Running (Integration Tests Only)
+## Step 4 - Ensure an App Is Running (e2e only)
 
-Before running any Playwright tests, verify the app is accessible on port 3000.
+The suite needs a running Open Mercato at `APP_URL` and a model key for uncached agent steps.
 
-```bash
-curl -sf http://localhost:3000 > /dev/null 2>&1
-```
+1. Read `.ai/qa/ephemeral-env.json`; when it reports `status: running`, use its `baseUrl`.
+2. Else probe the dev server: `curl -sf http://localhost:3000/login`.
+3. Else boot an ephemeral app: `yarn test:ephemeral:start` (Docker required), then read the URL from `.ai/qa/ephemeral-env.json`. Reuse and teardown rules live in the `om-prepare-test-env` skill.
 
-**If the server is running** (exit code 0): proceed directly to Step 5.
+Leave the environment running afterwards.
 
-**If the server is NOT running**: build the project and start the production server:
-
-```bash
-# Build everything (packages + app)
-yarn build
-
-# Start production server in background
-yarn start &
-APP_PID=$!
-
-# Wait up to 2 minutes for server to become ready
-echo "Waiting for server on port 3000..."
-SERVER_READY=0
-for i in $(seq 1 60); do
-  if curl -sf http://localhost:3000 > /dev/null 2>&1; then
-    echo "Server ready."
-    SERVER_READY=1
-    break
-  fi
-  sleep 2
-done
-
-if [ "$SERVER_READY" -eq 0 ]; then
-  echo "ERROR: Server did not become ready within 2 minutes. Aborting integration tests."
-  exit 1
-fi
-```
-
-After tests finish, leave the server running — do not kill it.
+If `AI_GATEWAY_API_KEY` is not set, say so in the plan: the run can only replay cached agent steps, and any step the app changed under will fail with a model error rather than a product finding.
 
 ---
 
-## Step 5 — Integration Tests (Playwright)
+## Step 5 - e2e Tests
 
-**Layer gate**: if `layer = ui` (all changed files are UI-only), skip this step entirely — Playwright tests are not affected by pure UI changes.
+**Layer gate**: `LAYER=ui` skips this step.
 
-Otherwise, use the Python script to map changed modules → affected spec files.
-Pass `--layer` so the script can apply the correct triggering rules:
+Map each affected module to an area tag with the table in `references/test-architecture.md` (`auth` -> `auth`, `customers` -> `crm`, `catalog` -> `catalog`, `sales` -> `sales`, `api_keys`/`dictionaries`/`auth` users and roles -> `admin`). Modules without a tag have no browser coverage yet; list them in the report.
 
 ```bash
-SPEC_FILES=$(printf '%s\n' "$CHANGED_FILES" \
-  | python3 .ai/skills/om-smart-test/scripts/find_affected_integration_tests.py \
-    --project-root . \
-    --base auto \
-    --layer "$LAYER")
-
-if [ "$SPEC_FILES" = "--all" ]; then
-  yarn test:integration
-elif [ -n "$SPEC_FILES" ]; then
-  yarn playwright test $SPEC_FILES --config=.ai/qa/tests/playwright.config.ts
+cd e2e
+if [ "$E2E_WIDE" = "true" ]; then
+  APP_URL="$APP_URL" npm test
+elif [ -n "$E2E_TAGS" ]; then
+  for tag in $E2E_TAGS; do APP_URL="$APP_URL" npm test -- --tag "$tag"; done
 else
-  echo "No affected integration tests found."
+  echo "No affected e2e tests."
 fi
 ```
 
-`$LAYER` is the value determined in Step 2b (`ui-component`, `api-logic`, `data`, or `mixed`).
+`npm run list -- --tag <tag>` previews a tag. Wide scope and `packages/ui/src/backend/` changes set `E2E_WIDE=true`.
 
-**Layer-aware dep filtering**: when `LAYER=ui-component`, the script only runs tests whose
-own module changed — it ignores cross-module `dependsOnModules` declarations. Rationale: a
-changed `page.tsx` or React component cannot break another module's API calls; only tests
-that actually visit those pages need to run.
-
-**Workspace scoping**: the script compares module identity by both module name and runtime
-root. For example, `apps/mercato/src/modules/example` and
-`packages/create-app/template/src/modules/example` are separate `example` modules, so an
-app-specific page change does not trigger template integration specs.
-
-**Wide scope**: if the script outputs `--all` (triggered when shared deps changed), run the full integration suite.
-
-**Data layer**: if `layer = data` (entities/migrations changed), integration tests are
-particularly important. Run normally via the script — the mapping will include all tests for
-the affected module including any that declare it as a dependency.
+Cross-module effects: `sales` flows create customers and read the catalog, so a `customers` or `catalog` change with `LAYER=api-logic`, `data`, or `mixed` also runs the `sales` tag. With `LAYER=ui-component` only the changed module's own tag runs.
 
 ---
 
-## Step 6 — Report Results
+## Step 6 - Report Results
 
-After tests complete, summarize:
-- Whether results came from cache (`[cache hit]`) or fresh analysis
-- How many Jest tests ran vs full suite
-- Which integration spec files ran and why (which changed module triggered each)
-- Whether the server was already running or was built and started
-- Any wide-scope fallback applied and why
+- Cache hit or fresh analysis
+- Jest: related tests vs full suite
+- e2e: which tags ran and which changed module triggered each; modules without browser coverage
+- Whether the app was already running, which URL, and whether a model key was available
+- Any wide-scope fallback and why
 
-**Coverage percentages** (always include at the end):
+Coverage table (always):
 
 | Type | Ran | Total | % |
 |------|-----|-------|---|
 | Unit (Jest suites) | `<ran>` | ~485 | `<ran/485 * 100>`% |
-| Integration (Playwright spec files) | `<ran>` | ~323 | `<ran/323 * 100>`% |
+| e2e tests | `<ran>` | `<npm run list>` | `<ran/total * 100>`% |
 
-Totals come from `references/test-architecture.md`. Round to one decimal place.
+Take the e2e total from `npm run list` inside `e2e/`; read failures from `e2e/.e2e/report.json`.
 
 ---
 
@@ -330,35 +221,26 @@ Totals come from `references/test-architecture.md`. Round to one decimal place.
 
 ```
 Step 0: .test-cache.json valid (hash + no uncommitted + reachable)?
-  └─ YES → run from cache; check integrationWide flag:
-           integrationWide=true  → Jest: cached files + Playwright: yarn test:integration
-           integrationWide=false → Jest: cached files + Playwright: cached spec files (or skip)
-  └─ NO  → analyze:
+  YES -> run from cache: Jest cached files; e2e whole suite when e2eWide, else cached tags, else skip
+  NO  -> analyze:
 
-       Step 2a — Scope:
-         └─ Only .test.ts/.test.tsx?        → Jest: run those files directly; Playwright: skip
-         └─ Only .spec.ts (__integration__/)? → Jest: skip; Playwright: run those files directly
-         └─ shared/events/queue/cache/root config?
-                                            → Full suite (yarn test + yarn test:integration)
-         └─ packages/ui/src/backend/?       → Jest: --findRelatedTests; Playwright: full suite
-         └─ Module-scoped?                  → extract module name(s)
-         └─ Package lib (no module)?        → --findRelatedTests for that package
+    Step 2a - Scope:
+      Only .test.ts/.test.tsx?           -> Jest: those files; e2e: skip
+      Only files under e2e/?             -> Jest: skip; e2e: changed files (or whole suite for config/support)
+      shared/events/queue/cache/config?  -> yarn test + whole e2e suite
+      packages/ui/src/backend/?          -> Jest: --findRelatedTests; e2e: whole suite
+      Module-scoped?                     -> extract module name(s)
+      Package lib (no module)?           -> --findRelatedTests for that package
 
-       Step 2b — Layer (for non-wide, non-test-only scopes):
-         └─ ALL files are pure CSS / design tokens / primitives?
-              → LAYER=ui
-              → Jest: --findRelatedTests <changed-src-files>
-              → Integration: SKIP (no DOM structure change possible)
-         └─ ANY file is ui-component / api-logic / data?
-              → LAYER=<ui-component|api-logic|data|mixed>
-              → Jest: --findRelatedTests <changed-src-files>
-              → Integration: check server → script maps modules → spec files
+    Step 2b - Layer:
+      ALL files CSS / tokens / primitives?       -> LAYER=ui, e2e skip
+      ANY ui-component / api-logic / data?       -> LAYER=<...>, map modules to tags, ensure app, run tags
 
-       → Set $LAYER → Save cache (with layer field) → run tests
+    Set $LAYER -> save cache -> run tests
 ```
 
 ---
 
 ## Reference Files
 
-- `references/test-architecture.md` — full test structure, module path patterns, framework configs, known cross-module integration dependencies
+- `references/test-architecture.md`: test layout, module path patterns, module-to-tag map, run commands

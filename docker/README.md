@@ -191,7 +191,6 @@ Windows users who develop through Docker can run any monorepo command using the 
 ```
 yarn docker:mercato init
 yarn docker:mercato eject currencies
-yarn docker:mercato test:integration
 ```
 
 > **Tip — custom compose file**: If you run a personalised stack (e.g. `starters/docker/compose.fullapp.dev.local.yml`),

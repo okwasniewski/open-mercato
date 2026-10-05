@@ -235,7 +235,7 @@ const widget: InjectionWidgetModule = {
 
 Use a small test harness page that mounts the widget and calls `useInjectionSpotEvents(...)` to trigger each handler deterministically.
 
-Recommended Playwright coverage:
+Recommended e2e coverage (agentic suite under `e2e/`):
 
 | Test ID | What to verify |
 |---------|----------------|
@@ -249,7 +249,7 @@ Recommended Playwright coverage:
 How to run:
 
 ```bash
-npx playwright test --config .ai/qa/tests/playwright.config.ts apps/mercato/src/modules/example/__integration__/TC-UMES-003.spec.ts
+cd e2e && npm test -- --tag example
 ```
 
 ### CrudForm Env Toggle

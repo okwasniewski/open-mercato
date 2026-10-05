@@ -35,10 +35,7 @@
         "ui.form-create",
         "ui.form-edit"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-011-form-locking.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-014",
         "OMH-015",
@@ -154,9 +151,7 @@
         "ui.datatable",
         "ui.datatable-perspectives-filters"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-014",
         "OMH-015",
@@ -814,10 +809,7 @@
       "capabilityIds": [
         "ui.form-edit"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-011-form-locking.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-181",
         "OMH-185",
@@ -858,10 +850,7 @@
       "capabilityIds": [
         "ui.form-create"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-011-form-locking.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-181",
         "OMH-185",
@@ -903,10 +892,7 @@
         "ui.form-create",
         "ui.form-edit"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-011-form-locking.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-181",
         "OMH-185",
@@ -958,9 +944,7 @@
         "ui.datatable",
         "ui.datatable-perspectives-filters"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-181",
         "OMH-185",
@@ -1014,8 +998,6 @@
         "umes.component-replacement"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-017-bound-extension-ui.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts",
         "src/modules/example/widgets/__tests__/component-override-modes.test.ts",
         "src/modules/example/widgets/__tests__/components.test.ts"
       ],
@@ -1055,9 +1037,7 @@
       "capabilityIds": [
         "umes.injection.datatable-bulk-action"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-181",
         "OMH-185",
@@ -1094,9 +1074,7 @@
       "capabilityIds": [
         "umes.injection.rendered-widget"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-181",
         "OMH-185",
@@ -2456,10 +2434,7 @@
       "capabilityIds": [
         "ui.form-edit"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-011-form-locking.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-185",
         "OMH-188",
@@ -2495,9 +2470,7 @@
       "capabilityIds": [
         "commands.interceptors"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-006-mutation-lifecycle.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-185",
         "OMH-188",
@@ -2537,9 +2510,6 @@
         "events.crud-indexer-bridge"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-002-query-index-failure.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-004-encryption.spec.ts",
         "src/modules/example/__tests__/encryption-search-contract.test.ts",
         "src/modules/example/commands/__tests__/todos.notes-encryption.test.ts",
         "src/modules/example/commands/__tests__/todos.prepare-scope.test.ts",
@@ -2684,10 +2654,7 @@
       "capabilityIds": [
         "data.custom-fields"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/todo-priority-validation.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-188",
         "OMH-219"
@@ -2727,7 +2694,6 @@
         "data.entities"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-004-encryption.spec.ts",
         "src/modules/example/__tests__/encryption-search-contract.test.ts",
         "src/modules/example/commands/__tests__/todos.notes-encryption.test.ts"
       ],
@@ -2792,9 +2758,7 @@
       "capabilityIds": [
         "data.validators"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/todo-priority-validation.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-188",
         "OMH-219"
@@ -2952,7 +2916,6 @@
         "data.entities"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-004-encryption.spec.ts",
         "src/modules/example/__tests__/encryption-search-contract.test.ts",
         "src/modules/example/commands/__tests__/todos.notes-encryption.test.ts"
       ],
@@ -3064,7 +3027,6 @@
         "module.setup-scheduler-target"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-010-setup-seeding.spec.ts",
         "src/modules/example/__tests__/setup-bulk-dispatch-schedule.test.ts",
         "src/modules/example/__tests__/setup-seeding.test.ts"
       ],
@@ -3102,9 +3064,7 @@
       "capabilityIds": [
         "overrides.unified-registry"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-022-overrides.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [],
       "replacesBaselineBlockIds": [
         "main:packages/create-app/agentic/shared/ai/skills/om-eject-and-customize/SKILL.md#fence:5"
@@ -3170,10 +3130,6 @@
         "module.di-registration"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-007-cache.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-015-specialized-registries.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-005.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-020.spec.ts",
         "src/modules/example/__tests__/di-registration.test.ts",
         "src/modules/example/__tests__/specialized-registries.test.ts"
       ],
@@ -3218,8 +3174,6 @@
         "integrations.mock-adapters"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-005.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-020.spec.ts",
         "src/modules/example/lib/__tests__/mock-gateway-adapter.test.ts",
         "src/modules/example/lib/__tests__/mock-shipping-adapter.test.ts",
         "src/modules/example/lib/__tests__/mock-webhook-endpoint-adapter.test.ts"
@@ -3263,8 +3217,6 @@
         "integrations.mock-adapters"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-005.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-020.spec.ts",
         "src/modules/example/lib/__tests__/mock-gateway-adapter.test.ts",
         "src/modules/example/lib/__tests__/mock-shipping-adapter.test.ts",
         "src/modules/example/lib/__tests__/mock-webhook-endpoint-adapter.test.ts"
@@ -3306,8 +3258,6 @@
         "integrations.mock-adapters"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-005.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-020.spec.ts",
         "src/modules/example/lib/__tests__/mock-gateway-adapter.test.ts",
         "src/modules/example/lib/__tests__/mock-shipping-adapter.test.ts",
         "src/modules/example/lib/__tests__/mock-webhook-endpoint-adapter.test.ts"
@@ -3426,10 +3376,7 @@
       "capabilityIds": [
         "api.crud-factory"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-021.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-185",
         "OMH-188",
@@ -3595,9 +3542,6 @@
         "search.encrypted-column-list-filter"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-002-query-index-failure.spec.ts",
-        "src/modules/example/__integration__/todo-priority-validation.spec.ts",
         "src/modules/example/api/__tests__/todos.encrypted-search.test.ts",
         "src/modules/example/api/__tests__/todos.request-scope.test.ts"
       ],
@@ -3649,9 +3593,6 @@
         "events.crud-indexer-bridge"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-002-query-index-failure.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-004-encryption.spec.ts",
         "src/modules/example/__tests__/encryption-search-contract.test.ts",
         "src/modules/example/commands/__tests__/todos.notes-encryption.test.ts",
         "src/modules/example/commands/__tests__/todos.prepare-scope.test.ts",
@@ -3696,10 +3637,7 @@
       "capabilityIds": [
         "data.custom-fields"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/todo-priority-validation.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-223"
       ],
@@ -3734,7 +3672,6 @@
         "data.entities"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-004-encryption.spec.ts",
         "src/modules/example/__tests__/encryption-search-contract.test.ts",
         "src/modules/example/commands/__tests__/todos.notes-encryption.test.ts"
       ],
@@ -3774,9 +3711,7 @@
       "capabilityIds": [
         "data.validators"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/todo-priority-validation.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-223"
       ],
@@ -3922,10 +3857,7 @@
       "capabilityIds": [
         "data.custom-fields"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/todo-priority-validation.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-185",
         "OMH-193",
@@ -3960,9 +3892,7 @@
       "capabilityIds": [
         "module.cli-command"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-011.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-185",
         "OMH-193",
@@ -4003,10 +3933,6 @@
         "module.di-registration"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-007-cache.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-015-specialized-registries.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-005.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-020.spec.ts",
         "src/modules/example/__tests__/di-registration.test.ts",
         "src/modules/example/__tests__/specialized-registries.test.ts"
       ],
@@ -4050,8 +3976,6 @@
         "events.typed-definitions"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-012-extension-topology.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-003.spec.ts",
         "src/modules/example/__tests__/announce-todo-to-portal.test.ts"
       ],
       "affectedCaseIds": [
@@ -4095,7 +4019,6 @@
         "umes.extension-points"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-017-bound-extension-ui.spec.ts",
         "src/modules/example/__tests__/extension-points.test.ts"
       ],
       "affectedCaseIds": [
@@ -4132,9 +4055,7 @@
       "capabilityIds": [
         "module.i18n-catalogs"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-APP-001-metadata.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-185",
         "OMH-193",
@@ -4217,7 +4138,6 @@
         "notifications.client-renderer"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-008-notification-renderer.spec.ts",
         "src/modules/example/__tests__/notifications.client.test.tsx"
       ],
       "affectedCaseIds": [
@@ -4254,9 +4174,7 @@
       "capabilityIds": [
         "notifications.reactive-handler"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-008.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-185",
         "OMH-193",
@@ -4291,10 +4209,7 @@
       "capabilityIds": [
         "notifications.type"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-008-notification-renderer.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-008.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-185",
         "OMH-193",
@@ -4370,7 +4285,6 @@
         "module.setup-scheduler-target"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-010-setup-seeding.spec.ts",
         "src/modules/example/__tests__/setup-bulk-dispatch-schedule.test.ts",
         "src/modules/example/__tests__/setup-seeding.test.ts"
       ],
@@ -4415,7 +4329,6 @@
         "module.translatable-fields"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-009-translations.spec.ts",
         "src/modules/example/__tests__/translations.test.ts"
       ],
       "affectedCaseIds": [
@@ -4682,9 +4595,7 @@
       "capabilityIds": [
         "api.interceptors"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -4729,9 +4640,7 @@
       "capabilityIds": [
         "commands.interceptors"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-006-mutation-lifecycle.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -4768,10 +4677,7 @@
       "capabilityIds": [
         "umes.response-enricher"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-002.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-012.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -4824,9 +4730,7 @@
       "capabilityIds": [
         "umes.mutation-guard"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-006-mutation-lifecycle.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -4868,7 +4772,6 @@
         "umes.extension-points"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-017-bound-extension-ui.spec.ts",
         "src/modules/example/__tests__/extension-points.test.ts"
       ],
       "affectedCaseIds": [
@@ -4908,7 +4811,6 @@
         "notifications.client-renderer"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-008-notification-renderer.spec.ts",
         "src/modules/example/__tests__/notifications.client.test.tsx"
       ],
       "affectedCaseIds": [
@@ -4947,9 +4849,7 @@
       "capabilityIds": [
         "notifications.reactive-handler"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-008.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -4986,9 +4886,7 @@
       "capabilityIds": [
         "events.sync-subscribers"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-006-mutation-lifecycle.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -5029,9 +4927,7 @@
       "capabilityIds": [
         "events.sync-subscribers"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-006-mutation-lifecycle.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -5109,9 +5005,7 @@
       "capabilityIds": [
         "events.sync-subscribers"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-006-mutation-lifecycle.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -5153,8 +5047,6 @@
         "umes.component-replacement"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-017-bound-extension-ui.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts",
         "src/modules/example/widgets/__tests__/component-override-modes.test.ts",
         "src/modules/example/widgets/__tests__/components.test.ts"
       ],
@@ -5199,7 +5091,6 @@
         "umes.injection-table"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-001.spec.ts",
         "src/modules/example/widgets/__tests__/injection-table.test.ts"
       ],
       "affectedCaseIds": [
@@ -5246,9 +5137,7 @@
       "capabilityIds": [
         "umes.injection.datatable-bulk-action"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -5289,9 +5178,7 @@
       "capabilityIds": [
         "umes.injection.datatable-column"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -5332,9 +5219,7 @@
       "capabilityIds": [
         "umes.injection.rendered-widget"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -5377,9 +5262,7 @@
       "capabilityIds": [
         "umes.injection.crud-form-field"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -5428,9 +5311,7 @@
       "capabilityIds": [
         "umes.injection.datatable-filter"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -5473,9 +5354,7 @@
       "capabilityIds": [
         "umes.injection.datatable-row-action"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -5516,10 +5395,7 @@
       "capabilityIds": [
         "umes.injection.menu-items"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-001.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-003.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -5560,10 +5436,7 @@
       "capabilityIds": [
         "umes.injection.menu-items"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-001.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-003.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-025",
         "OMH-088",
@@ -5600,9 +5473,7 @@
       "capabilityIds": [
         "overrides.unified-registry"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-022-overrides.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [
         "OMH-089"
       ],
@@ -5760,10 +5631,7 @@
       "capabilityIds": [
         "api.crud-factory"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-004.spec.ts",
-        "src/modules/example/__integration__/TC-UMES-021.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [],
       "replacesBaselineBlockIds": [
         "main:packages/create-app/agentic/shared/ai/skills/om-troubleshooter/SKILL.md#fence:10",
@@ -5800,10 +5668,7 @@
       "capabilityIds": [
         "ui.form-edit"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-011-form-locking.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [],
       "replacesBaselineBlockIds": [],
       "citedByBaselineBlockIds": [],
@@ -5875,9 +5740,6 @@
         "events.crud-indexer-bridge"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-002-query-index-failure.spec.ts",
-        "src/modules/example/__integration__/TC-EXAMPLE-004-encryption.spec.ts",
         "src/modules/example/__tests__/encryption-search-contract.test.ts",
         "src/modules/example/commands/__tests__/todos.notes-encryption.test.ts",
         "src/modules/example/commands/__tests__/todos.prepare-scope.test.ts",
@@ -5915,9 +5777,7 @@
         "ui.datatable",
         "ui.datatable-perspectives-filters"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [],
       "replacesBaselineBlockIds": [],
       "citedByBaselineBlockIds": [],
@@ -5948,9 +5808,7 @@
       "capabilityIds": [
         "data.validators"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/todo-priority-validation.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [],
       "replacesBaselineBlockIds": [],
       "citedByBaselineBlockIds": [],
@@ -6016,9 +5874,7 @@
       "capabilityIds": [
         "overrides.unified-registry"
       ],
-      "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-022-overrides.spec.ts"
-      ],
+      "integrationTestPaths": [],
       "affectedCaseIds": [],
       "replacesBaselineBlockIds": [
         "main:packages/create-app/agentic/shared/ai/skills/om-troubleshooter/SKILL.md#fence:3"
@@ -6054,7 +5910,6 @@
         "umes.injection-table"
       ],
       "integrationTestPaths": [
-        "src/modules/example/__integration__/TC-UMES-001.spec.ts",
         "src/modules/example/widgets/__tests__/injection-table.test.ts"
       ],
       "affectedCaseIds": [],

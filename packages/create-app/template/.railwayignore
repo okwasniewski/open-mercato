@@ -7,8 +7,6 @@
 .yarn/unplugged/
 node_modules/
 coverage/
-test-results/
-playwright-report/
 /storage/
 /data/
 *.db

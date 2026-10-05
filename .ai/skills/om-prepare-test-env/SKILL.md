@@ -19,70 +19,39 @@ procedure. Any entrypoint scripts this skill compiles (default `.ai/scripts/test
 and are gitignored (`.ai/scripts/test-env-*`): keep them local, NEVER commit them. Anything
 worth preserving for teammates belongs in this file as a platform-neutral rule instead. On a
 machine without generated entrypoints, regenerate from the commands and contracts in this file
-(discovered mode: wrap `yarn test:integration:ephemeral:start`, attach when the CLI state file's
+(discovered mode: wrap `yarn test:ephemeral:start`, attach when the CLI state file's
 env probes healthy, write `.ai/qa/test-env.json`; teardown stops only the CLI owner + app —
 the ephemeral Postgres containers are testcontainers/ryuk-managed). The repo CLI owns build
 cache, provisioning, seeding, and its own owner lock — an entrypoint never re-implements those
 (state file `.ai/qa/ephemeral-env.json` stays authoritative).
 
-## CI parity contract
+## App env block
 
-CI's `ephemeral-integration` job (`.github/workflows/ci.yml`) runs the **same repo CLI** the
-entrypoint wraps (`yarn test:integration:coverage [--shard i/n]`), with a job-level env block the
-CLI does not fully self-supply: `MOCK_INBOUND_WEBHOOK_SECRET`, `OM_WEBHOOKS_ALLOW_PRIVATE_URLS=1`,
-`OM_OPTIMISTIC_LOCK=all`, `SELF_SERVICE_ONBOARDING_ENABLED=true`,
-`OM_INTEGRATION_APP_READY_TIMEOUT_SECONDS=180`, plus `OM_ENABLE_ENTERPRISE_MODULES{,_SSO,_SECURITY}=true`.
-The generated `test-env-up.sh` mirrors all of these EXCEPT the enterprise flags (local default
-stays `false`; export them before calling the script when CI-scope parity including enterprise
-suites is needed — it changes the app build fingerprint and forces a rebuild).
+The ephemeral app is booted by the repo CLI with its own env block (`buildReusableEnvironment`
+in `packages/cli/src/lib/testing/integration.ts`): an isolated `DATABASE_URL`, `QUEUE_BASE_DIR`,
+`JWT_SECRET`, mock webhook secrets, `ENABLE_CRUD_API_CACHE`. A generated `test-env-up.sh` adds
+`MOCK_INBOUND_WEBHOOK_SECRET`, `OM_WEBHOOKS_ALLOW_PRIVATE_URLS=1`, `OM_OPTIMISTIC_LOCK=all`,
+`SELF_SERVICE_ONBOARDING_ENABLED=true`, `OM_INTEGRATION_APP_READY_TIMEOUT_SECONDS=180`; the
+enterprise flags (`OM_ENABLE_ENTERPRISE_MODULES{,_SSO,_SECURITY}=true`) stay `false` locally and
+change the app build fingerprint when exported (forces a rebuild).
 
 ## Environment commands (authoritative)
 
-- Boot app-only ephemeral env: `yarn test:integration:ephemeral:start` (= `yarn mercato test:ephemeral`).
-  Preferred app port `5001`; the actual port and DB URL land in `.ai/qa/ephemeral-env.json`
-  (managed by the CLI — never write it by hand).
-- Full suite with managed env: `yarn test:integration:ephemeral` (= `yarn mercato test:integration`).
-  It reuses a healthy running ephemeral env from the state file, else provisions one.
-- Filtered run: `yarn mercato test:integration <substring>` — batches all specs whose path matches
-  the substring. The `test:integration` subcommand does NOT accept `--retries`; retries live in
-  `.ai/qa/tests/playwright.config.ts`.
+- Boot app-only ephemeral env: `yarn test:ephemeral:start` (= `yarn mercato test:ephemeral`;
+  `yarn test:ephemeral:start:verbose` for the full log). Preferred app port `5001`; the actual
+  port and DB URL land in `.ai/qa/ephemeral-env.json` (managed by the CLI, never write it by hand).
+- Run the browser suite against it from `e2e/`: `cd e2e && APP_URL=<baseUrl> npm test`
+  (`-- --tag <area>` or `-- <file>` to narrow). The suite reaches the app over HTTP only, so
+  `APP_URL` is the whole contract: no database or queue env is needed on the test side. Setup
+  once: `npm install && npx @e2e-dev/web install chromium`. Details in the `om-integration-tests`
+  skill.
 
-## Choosing the run mode — prefer ephemeral, ask the user
+## Run mode
 
-`yarn test:integration:ephemeral` is ALWAYS preferred over plain `yarn test:integration`: the
-ephemeral variant provisions (or safely reuses) its own isolated app + database, so it is more
-autonomous and cannot touch the developer's dev data. Plain `yarn test:integration` only works
-when the caller supplies the full runner env block (see the MUST below) — treat it as an internal
-detail of the CLI runner, never as the command you reach for first.
-
-Two supported run modes:
-
-1. **Fully managed ephemeral (default, safest):** `yarn test:integration:ephemeral [filter]` —
-   one command provisions the env, runs the tests, and leaves teardown to the CLI's own
-   lifecycle. Best for full-suite runs, CI parity, and unattended/autonomous work.
-2. **Reuse a running ephemeral env (fast iteration):** boot once with
-   `yarn test:integration:ephemeral:start`, then run small filtered batches with
-   `yarn mercato test:integration <filter>` against the same env. Best for short
-   author/debug loops where re-provisioning per run would dominate wall-clock time. Reuse is
-   still gated by the TTL and source-freshness rules below.
-
-When a user is present and has not already said which mode they want, ASK before the first run
-(one question, two options): fully managed ephemeral per run, or boot-once-and-reuse for
-iterative loops. Recommend the fully managed ephemeral mode — it is more autonomous and safer
-regarding data. When running unattended (no user to ask), default to the fully managed ephemeral
-mode. Do not re-ask once the user has chosen; keep using their answer for the rest of the
-session unless they change it.
-
-## MUST: never run the Playwright suite outside the CLI runner
-
-`yarn test:integration` with only `BASE_URL` exported is a trap: the CLI runner
-(`buildReusableEnvironment` in `packages/cli/src/lib/testing/integration.ts`) injects a full env
-block into the Playwright process — `DATABASE_URL` (ephemeral DB), `QUEUE_BASE_DIR`, `JWT_SECRET`,
-`OM_INTEGRATION_TEST`, mock webhook secrets, `ENABLE_CRUD_API_CACHE`, and more. Without it,
-DB-fixture helpers silently fall back to `apps/mercato/.env`'s `DATABASE_URL` (the developer's dev
-database) and fail with cross-database FK violations (e.g.
-`organizations_tenant_id_foreign`), and queue-drain helpers drain the wrong queue dir. Always go
-through `yarn mercato test:integration [filter]`.
+Boot once, iterate against the running env. The e2e suite never provisions an app itself, so the
+descriptor's `baseUrl` is reused for every run until the TTL and freshness rules below refuse it.
+The alternative is the developer's `yarn dev` server on `:3000` (the suite's default `APP_URL`);
+prefer the ephemeral env whenever the run creates data, so the dev database stays untouched.
 
 ## Reuse TTL and the owner-lock deadlock
 
@@ -95,9 +64,9 @@ through `yarn mercato test:integration [filter]`.
   `packages/cli/dist/bin.js test:ephemeral` PID and the `next-server` PID bound to the app port,
   delete `.ai/qa/ephemeral-env.json`, then boot fresh. The ephemeral Postgres containers are
   testcontainers-managed (ryuk reaps them).
-- For short diagnose/re-run loops against the SAME env that produced a failure, extend the TTL:
-  `OM_INTEGRATION_BUILD_CACHE_TTL_SECONDS=86400 yarn mercato test:integration <filter>` — but only
-  when no source file changed since boot; otherwise rebuild (never test stale code).
+- For short diagnose/re-run loops against the SAME env that produced a failure, extend the TTL
+  when re-booting: `OM_INTEGRATION_BUILD_CACHE_TTL_SECONDS=86400 yarn test:ephemeral:start` - but
+  only when no source file changed since boot; otherwise rebuild (never test stale code).
 
 ## Stale-port zombie check
 
@@ -196,19 +165,19 @@ logs a 400. Wait for `networkidle` plus a short settle, fill `#email` / `#passwo
 `button[type=submit]`, then poll `page.url()` — the post-login transition is client-side, so
 `waitForURL` and `waitForFunction` both hang on it.
 
-## Playwright browsers offline — 2026-08-05
+## Browser install offline - 2026-08-05
 
-When the sandbox has no network, `npx playwright install chromium` exits 0 and downloads nothing, so
-it cannot repair a mismatch between the checkout's Playwright version and the browsers already in
-`~/Library/Caches/ms-playwright`. Check what is actually cached, and launch that build directly via
-`chromium.launch({ executablePath })` — the CDP protocol spans neighbouring builds.
+When the sandbox has no network, `npx @e2e-dev/web install chromium` (run inside `e2e/`) downloads
+nothing, so it cannot repair a mismatch between the `playwright-core` pinned by `@e2e-dev/web` and
+the builds already in `~/Library/Caches/ms-playwright`. Check what is actually cached before
+blaming the app; neighbouring Chromium builds usually still launch.
 
 ## A fresh worktree needs the full prepare chain before the CLI — 2026-08-10
 
 `yarn install` alone is not enough to boot the ephemeral env in a newly created worktree, and both
 failures present as something other than their cause:
 
-- **`packages/cli/dist/bin.js` is a build artifact.** Without it `yarn test:integration:ephemeral:start`
+- **`packages/cli/dist/bin.js` is a build artifact.** Without it `yarn test:ephemeral:start`
   dies with a bare `MODULE_NOT_FOUND` Node stack that never names the CLI, so the boot log looks like
   a broken script rather than an unbuilt workspace.
 - **One `build:packages` pass is not enough.** The root `build` script is

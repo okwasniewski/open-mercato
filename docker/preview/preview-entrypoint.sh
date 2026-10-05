@@ -11,4 +11,4 @@ yarn build:packages
 cd /app/apps/mercato
 
 cd /app
-exec yarn test:integration:ephemeral:start
+exec yarn test:ephemeral:start

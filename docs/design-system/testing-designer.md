@@ -53,7 +53,7 @@ Zero tools. Systematic manual workflow.
 
 #### Tier 2 — Weeks 2-4: Playwright Screenshot Tests [POST-HACKATHON]
 
-The project already uses Playwright (`yarn test:integration`). Add screenshot comparison.
+Browser coverage lives in the agentic e2e suite under `e2e/` (`cd e2e && npm test`, see `e2e/README.md`); it runs on Playwright, so screenshot comparison can sit next to it.
 
 **Setup:**
 

@@ -290,10 +290,6 @@ my-store/
     │   └── ui/                   # shadcn/ui primitives
     ├── i18n/                     # Locale files (en, pl, es, de)
     └── modules/                  # Your custom modules (from: '@app')
-        └── auth/
-            └── __integration__/  # Integration test scaffold
-                ├── TC-AUTH-001.spec.ts
-                └── helpers/auth.ts
 ```
 
 ### Key files
@@ -385,10 +381,6 @@ Two things worth knowing before exposing this beyond your own machine:
 ### AI tooling
 
 When selected at scaffold time, the project includes the shared `AGENTS.md` router plus tool-specific Claude Code, Codex, and/or Cursor configuration. Durable standalone knowledge lives in `.ai/guides/` and `.ai/skills/`; installed skill discovery lives in `.agents/skills/`. Prefer extending the routed guide or skill that owns a rule over growing the root file. See [Set up the AI development harness](#set-up-the-ai-development-harness) for installation, exact framework context, evaluation, and release maintenance.
-
-### Integration test scaffold
-
-The project includes a starter integration test at `src/modules/auth/__integration__/TC-AUTH-001.spec.ts` with a helper module for authentication. Use this as a reference when writing Playwright-based integration tests for your custom modules. Run tests with `yarn test:integration`.
 
 ## Available scripts
 

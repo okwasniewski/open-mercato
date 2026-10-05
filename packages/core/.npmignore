@@ -1,4 +1,3 @@
 **/__tests__/
-**/__integration__/
 **/*.test.ts
 **/*.test.tsx

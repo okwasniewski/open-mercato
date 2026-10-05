@@ -165,10 +165,7 @@ const EXPLICIT_TEMPLATE_FILE_MAPPINGS = [
     rel: 'docker/redis/redis.conf',
   },
 ] as const
-export const TEMPLATE_ONLY_RELATIVE_FILES = new Set<string>([
-  'modules/auth/__integration__/TC-AUTH-001.spec.ts',
-  'modules/auth/__integration__/helpers/auth.ts',
-])
+export const TEMPLATE_ONLY_RELATIVE_FILES = new Set<string>()
 const SYNC_DEPENDENCY_KEYS = [
   'next',
   'pg',

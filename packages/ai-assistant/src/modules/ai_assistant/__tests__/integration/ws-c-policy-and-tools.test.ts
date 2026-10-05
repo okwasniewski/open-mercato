@@ -2,7 +2,7 @@
  * Step 3.13 — Phase 1 WS-C integration tests (policy gate + tool resolution).
  *
  * These tests sit between the per-module unit tests (under each pack's own
- * `__tests__/`) and the HTTP Playwright coverage under `.ai/qa/tests/ai-framework/`.
+ * `__tests__/`) and the HTTP coverage in the repository e2e suite under `e2e/`.
  * The goal is to exercise the full runtime pipeline — agent registry → policy
  * gate → tool resolution → AI SDK adapter — against realistic fixtures and
  * assert the cross-cutting invariants that neither layer alone can catch.

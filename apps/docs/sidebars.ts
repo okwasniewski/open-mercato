@@ -331,8 +331,8 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
-          label: "Integration Testing",
-          items: ["cli/test-integration", "cli/test-ephemeral"],
+          label: "Ephemeral Environment",
+          items: ["cli/test-ephemeral"],
         },
         "cli/scheduler",
         {

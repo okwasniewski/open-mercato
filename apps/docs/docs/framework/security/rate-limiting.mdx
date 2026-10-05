@@ -357,9 +357,9 @@ misconfiguration for what it is.
 
 ## Testing
 
-Rate limiting is automatically disabled when `OM_INTEGRATION_TEST=true` is set in the environment. The ephemeral integration-test runtime (`yarn test:integration`, `yarn test:integration:ephemeral`) sets this for you, so test suites do not have to disable limits by hand or flush counters between cases.
+Rate limiting is automatically disabled when `OM_INTEGRATION_TEST=true` is set in the environment. The ephemeral app runtime (`yarn test:ephemeral:start`) sets this for you, so test suites do not have to disable limits by hand or flush counters between cases.
 
-When running tests against a long-lived dev server (e.g. `yarn dev` + `npx playwright test`), set the flag yourself:
+When running tests against a long-lived dev server (e.g. `yarn dev` + the e2e suite), set the flag yourself:
 
 ```bash
 OM_INTEGRATION_TEST=true yarn dev

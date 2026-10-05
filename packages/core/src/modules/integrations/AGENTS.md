@@ -230,6 +230,5 @@ The integrations module itself uses UMES to inject external ID displays on any e
 
 ## Integration Test Expectations
 
-- Module-local integration tests go under `__integration__/`
-- Use helpers from `@open-mercato/core/modules/core/__integration__/helpers/*`
-- Tests must create prerequisites via API and clean up in `finally`
+- Browser and API scenarios go in the repository e2e suite under `e2e/` (see `e2e/README.md`)
+- Tests must create prerequisites via API and clean up after themselves

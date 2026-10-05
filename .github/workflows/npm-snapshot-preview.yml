@@ -224,7 +224,7 @@ jobs:
             }
 
   standalone-integration:
-    name: Standalone App Integration Tests
+    name: Standalone App Smoke
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs:
       - resolve-pr
@@ -435,60 +435,11 @@ jobs:
           tail -n 200 /tmp/standalone-app.log || true
           exit 1
 
-      - name: Install Playwright
-        run: npx playwright install --with-deps chromium
-
-      - name: Run integration tests
-        env:
-          OM_TEST_APP_ROOT: /tmp/standalone-app
-          BASE_URL: http://localhost:3001
-          DATABASE_URL: postgres://mercato:secret@localhost:5432/mercato_test
-          APP_URL: http://localhost:3001
-          NEXT_PUBLIC_APP_URL: http://localhost:3001
-          PLATFORM_PORTAL_BASE_URL: http://localhost:3001
-          # Must match the value written into the standalone app's .env — the app
-          # writes captured emails here and TC-AUTH-033 reads them back.
-          OM_TEST_EMAIL_CAPTURE_PATH: ${{ github.workspace }}/.ai/qa/email-capture.jsonl
-          AUTH_SECRET: ci-standalone-test-auth-secret
-          JWT_SECRET: ci-standalone-test-jwt-secret-32-chars-min
-          TENANT_DATA_ENCRYPTION_FALLBACK_KEY: ci-standalone-test-fallback-key
-          OM_SECURITY_MFA_SETUP_SECRET: ci-standalone-test-mfa-setup-secret
-          MOCK_GATEWAY_WEBHOOK_SECRET: open-mercato-mock-dev-webhook-secret
-          MOCK_CARRIER_WEBHOOK_SECRET: open-mercato-mock-dev-carrier-webhook-secret
-          # Queue-drain child processes inherit this env rather than the app's
-          # .env, so they must invalidate the same shared store the server reads.
-          CACHE_STRATEGY: sqlite
-          CACHE_SQLITE_PATH: /tmp/standalone-app/.mercato/cache/cache.db
-          # Same reason: with AUTO_SPAWN_WORKERS=false the `push-deliveries` job is
-          # executed by a drain CHILD of this process, which never reads the app's
-          # .env — so the `push_stub` adapter must be enabled here too, exactly as
-          # the ephemeral harness sets it on both the Playwright process and the
-          # app server (TC-PUSH-003).
-          OM_ENABLE_PUSH_STUB_ADAPTER: '1'
-          # The Playwright process starts the collaboration sidecar itself
-          # (ensureManagedCollabSidecar reads NEXT_PUBLIC_DOCUMENTS_COLLAB_URL) and the
-          # sidecar verifies the tokens the app mints, so both halves need the same
-          # secret. Mirrors the app .env written above.
-          NEXT_PUBLIC_DOCUMENTS_COLLAB_URL: 'ws://127.0.0.1:4101'
-          DOCUMENTS_COLLAB_JWT_SECRET_V2: 'ci-standalone-documents-collab-v2-secret-32b'
-        run: yarn test:integration
-
-      - name: Print standalone app log on test failure
+      - name: Print standalone app log on failure
         if: failure()
         run: |
           echo "=== /tmp/standalone-app.log (last 1000 lines) ==="
           tail -n 1000 /tmp/standalone-app.log || echo "(no log file)"
-
-      - name: Upload test artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: standalone-integration-results
-          path: |
-            .ai/qa/test-results/html/
-            .ai/qa/test-results/artifacts/
-            .ai/qa/test-results/results.json
-          if-no-files-found: ignore
 
       - name: Upload standalone app log
         if: always()

@@ -2,6 +2,5 @@
 .turbo/
 *.tsbuildinfo
 **/__tests__/
-**/__integration__/
 **/*.test.ts
 **/*.test.tsx

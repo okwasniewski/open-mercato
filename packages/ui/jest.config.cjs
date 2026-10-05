@@ -43,7 +43,6 @@ module.exports = {
   ],
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.test.(ts|tsx)',
-    '<rootDir>/__integration__/**/*.spec.(ts|tsx)',
   ],
   passWithNoTests: true,
 }

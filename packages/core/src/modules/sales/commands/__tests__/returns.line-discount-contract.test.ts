@@ -19,9 +19,8 @@
  * Scope note, deliberately stated rather than implied: this file drives
  * `sales.returns.create`, the flow the existing harness in
  * `returns.net-total.test.ts` already covers reliably. The full create → delete
- * round trip of acceptance criterion 6 is covered by the integration spec
- * `__integration__/TC-SALES-5019-line-discount-idempotency.spec.ts` against a
- * real database, because faking the delete path's return-snapshot loading here
+ * round trip of acceptance criterion 6 belongs to the e2e suite (`TC-SALES-5019`)
+ * against a real database, because faking the delete path's return-snapshot loading here
  * would assert the shape of the mock rather than the behaviour of the code.
  */
 

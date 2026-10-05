@@ -427,8 +427,8 @@ describe('aggregations', () => {
      * MikroORM does not hand the parameters to the driver: `AbstractSqlConnection.execute` calls
      * `platform.formatQuery`, which interpolates every value into the SQL string. This suite
      * cannot open a PostgreSQL connection, so it asserts on the output of that same interpolation
-     * — the exact text the server receives. End-to-end execution against a live PostgreSQL is
-     * covered by `__integration__/TC-DASH-010-set-filter-operators.spec.ts`.
+     * - the exact text the server receives. End-to-end execution against a live PostgreSQL
+     * belongs to the e2e suite (`TC-DASH-010`).
      */
     describe('rendered SQL (PostgreSqlPlatform.formatQuery)', () => {
       const platform = new PostgreSqlPlatform()

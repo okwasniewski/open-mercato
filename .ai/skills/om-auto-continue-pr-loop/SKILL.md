@@ -9,5 +9,5 @@ This file extends the shared `om-auto-continue-pr-loop` skill from [open-mercato
 
 - **Spec sources**: `.ai/specs/` or `.ai/specs/enterprise/` (enterprise scope); run-folder contract in `.ai/runs/README.md`.
 - **Legacy plan format**: PRs opened before the run-folder migration may carry `Tracking plan: .ai/runs/<date>-<slug>.md` (flat file). Honor it: create `.ai/runs/<date>-<slug>/`, move the flat plan in as `PLAN.md`, and initialize `HANDOFF.md`/`NOTIFY.md` as part of the resume's first commit.
-- **Spec-completion gates**: "the repo's integration suite" means `yarn test:integration` plus `yarn test:create-app:integration` when template-synced surfaces changed; "any style-compliance pass" means the `om-ds-guardian` skill when UI was touched.
+- **Spec-completion gates**: "the repo's integration suite" means the agentic e2e suite (`cd e2e && APP_URL=<url> npm test`; see the `om-integration-tests` skill) plus `yarn test:create-app:integration` when template-synced surfaces changed; "any style-compliance pass" means the `om-ds-guardian` skill when UI was touched.
 - **Validation runner**: pick Docker vs local per root `AGENTS.md` § Validation Commands before running the gate.

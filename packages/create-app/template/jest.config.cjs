@@ -1,7 +1,5 @@
 /** @type {import('jest').Config} */
 // Unit-test config for a standalone Open Mercato app.
-// Integration tests run through Playwright (`yarn test:integration:ephemeral`)
-// and are excluded here.
 // `create-mercato-app` skips `__tests__`/`__integration__` while copying the
 // template, so a freshly scaffolded app owns no test files until you write one.
 module.exports = {

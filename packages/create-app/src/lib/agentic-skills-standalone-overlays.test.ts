@@ -81,7 +81,7 @@ test('the repo ships no generated test-env shell entrypoints (machine-bound, git
   )
 })
 
-test('the template wires the ephemeral runner scripts and the override keeps the ephemeral-first run-mode contract', () => {
+test('the template wires the ephemeral start script and the override documents it', () => {
   const templatePackageJson = JSON.parse(
     fs.readFileSync(new URL('../../template/package.json.template', import.meta.url), 'utf8'),
   ) as { scripts?: Record<string, string> }
@@ -93,23 +93,14 @@ test('the template wires the ephemeral runner scripts and the override keeps the
   // The contract this guards is "the cross-platform mercato CLI, never an
   // sh-based script"; the sibling assertion above still enforces the sh ban.
   assert.equal(
-    scripts['test:integration:ephemeral'],
-    'yarn mercato test:integration',
-    'test:integration:ephemeral must run the cross-platform mercato CLI suite runner',
-  )
-  assert.equal(
-    scripts['test:integration:ephemeral:start'],
+    scripts['test:ephemeral:start'],
     'yarn mercato test:ephemeral',
-    'test:integration:ephemeral:start must boot the app-only ephemeral env via the mercato CLI (reused by iterative filtered runs)',
+    'test:ephemeral:start must boot the app-only ephemeral env via the mercato CLI',
   )
   const override = readOverrideSkill('om-prepare-test-env')
   assert.ok(
-    override.includes('test:integration:ephemeral:start'),
-    'the om-prepare-test-env override must document the boot-once start script for iterative reuse',
-  )
-  assert.ok(
-    /prefer(red)? over plain `yarn test:integration`/i.test(override),
-    'the om-prepare-test-env override must state that test:integration:ephemeral is preferred over plain test:integration',
+    override.includes('test:ephemeral:start'),
+    'the om-prepare-test-env override must document the boot-once start script',
   )
   assert.ok(
     /ASK before the first run/.test(override),
@@ -128,10 +119,10 @@ test('spec delivery does not promote the optional ephemeral runner into a mandat
     fs.readFileSync(new URL('../../template/AGENTS.md', import.meta.url), 'utf8'),
   ]
 
-  assert.doesNotMatch(phasesAndGates, /test:integration:ephemeral|integration: blocked/)
+  assert.doesNotMatch(phasesAndGates, /test:ephemeral:start|integration: blocked/)
   assert.doesNotMatch(override, /Consumed by the spec exit gate|final phase remains open/)
   for (const instructions of rootInstructions) {
-    assert.match(instructions, /integration: `yarn test:integration:ephemeral`/)
+    assert.match(instructions, /disposable app for manual checks: `yarn test:ephemeral:start`/)
     assert.doesNotMatch(instructions, /spec-exit integration/)
   }
 })

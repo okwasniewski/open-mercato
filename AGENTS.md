@@ -294,7 +294,7 @@ yarn dev                  # Compact dev runtime; press `d` for raw logs (`:verbo
 yarn dev:reset            # Clear .mercato/next/dev plus legacy .next caches when Turbopack serves stale chunks
 yarn build                # Build everything (`build:packages` / `build:app` for one side)
 yarn lint                 # Lint all packages
-yarn test                 # Run unit tests (`test:integration` for Playwright, headless)
+yarn test                 # Run unit tests (browser e2e: `cd e2e && npm test`, see e2e/README.md)
 yarn generate             # Run module generators
 yarn db:generate          # Generate database migrations (`db:migrate` applies them — ask first)
 yarn initialize           # Full project initialization

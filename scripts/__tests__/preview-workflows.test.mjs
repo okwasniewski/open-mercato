@@ -33,15 +33,12 @@ function assertStandaloneExampleActivationLane(workflow) {
   const activatedGenerationIndex = stepIndex(workflow, 'Generate activated standalone app modules')
   const buildIndex = stepIndex(workflow, 'Build standalone app')
   const startIndex = stepIndex(workflow, 'Start standalone app')
-  const integrationIndex = stepIndex(workflow, 'Run integration tests')
 
   assert.ok(baselineIndex < activationIndex, 'The published scaffold must generate once while example is disabled')
   assert.ok(activationIndex < activatedGenerationIndex, 'The example fixture must be activated before regeneration')
   assert.ok(activatedGenerationIndex < buildIndex, 'The activated fixture must be generated before the app build')
   assert.ok(buildIndex < startIndex, 'The activated app must be built before it is started')
-  assert.ok(startIndex < integrationIndex, 'The activated app must be running before TC-EXAMPLE-016 executes')
   assert.match(workflow, /run: yarn tsx scripts\/prepare-standalone-example-integration\.ts \/tmp\/standalone-app/)
-  assert.match(workflow, /OM_TEST_APP_ROOT: \/tmp\/standalone-app/)
 }
 
 test('package previews are explicit same-repository workflow dispatches', () => {

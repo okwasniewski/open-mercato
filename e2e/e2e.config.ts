@@ -4,7 +4,7 @@ import { gateway } from 'ai';
 
 // The Open Mercato admin runs at APP_URL (default: the local dev server).
 // Start it first: `yarn dev` in the repository root, or point APP_URL at an
-// ephemeral environment from `yarn test:integration:ephemeral:start`.
+// ephemeral environment from `yarn test:ephemeral:start`.
 const APP_URL = process.env.APP_URL ?? 'http://localhost:3000';
 
 // Demo accounts seeded by `yarn mercato init`. Override per run with

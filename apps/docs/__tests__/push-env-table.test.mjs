@@ -13,9 +13,9 @@ const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const pageUrl = new URL('../docs/framework/modules/push-notifications.mdx', import.meta.url);
 const moduleRoot = resolve(repoRoot, 'packages/core/src/modules/push_notifications');
 
-// Test and integration sources set these variables rather than reading them for behaviour, so they
+// Test sources set these variables rather than reading them for behaviour, so they
 // say nothing about what the module supports.
-const SKIPPED_SOURCE_FRAGMENTS = ['__tests__', '__integration__'];
+const SKIPPED_SOURCE_FRAGMENTS = ['__tests__'];
 
 // Where each documented default and floor is declared. The numbers are NOT repeated here — only the
 // location — so changing a default in the module fails this test until the table is updated.

@@ -3,8 +3,8 @@
 An [e2e](https://e2e.dev) suite that drives the Open Mercato admin the way a
 tester would: each test states goals in natural language, an agent executes
 them in a real browser, and deterministic checks (URL, API read-back, exact
-values) pin the outcome. It ports the `.ai/qa/scenarios/TC-*.md` scenarios
-that the Playwright `__integration__` specs cover with hand-written clicks.
+values) pin the outcome. It covers the `.ai/qa/scenarios/TC-*.md` scenarios; each test title carries
+the scenario id.
 
 This folder is a standalone npm project on purpose: the monorepo's Yarn
 workspaces and `resolutions` would otherwise reach into it. `@e2e-dev/web`
@@ -16,7 +16,7 @@ repository's Playwright version.
 ```bash
 # 1. Start the app (any of these), seeded with the demo accounts
 yarn dev                                   # monorepo dev server on :3000
-yarn test:integration:ephemeral:start      # or an ephemeral app; read the URL from .ai/qa/ephemeral-env.json
+yarn test:ephemeral:start      # or an ephemeral app; read the URL from .ai/qa/ephemeral-env.json
 
 # 2. Run the suite
 cd e2e
@@ -74,7 +74,7 @@ in the demo tenant.
   `/api/api_keys/keys` filters by the signed-in user's organization, so the
   admin who just created it sees "No results found". The agent reported this
   truthfully on the first run; the test now names the organization.
-- **`TC-ADMIN-001.spec.ts` cleans up through `/api/auth/api-keys`, which is a
+- **The former Playwright TC-ADMIN-001 spec cleaned up through `/api/auth/api-keys`, which is a
   404.** The module's endpoint is `/api/api_keys/keys`, so that spec leaks a
   key per run. The `.catch(() => {})` hides it.
 - **Logging out revokes the server session**, not just the cookie. A saved
@@ -85,5 +85,6 @@ in the demo tenant.
 
 A passing `agent.act` is recorded under `.e2e/cache/` after a later check
 confirms the outcome, and replays without a model call while the screens are
-unchanged. The cache directory is meant to be committed so CI replays; the
-model is consulted only when the app changed under a step.
+unchanged. `.e2e/` is ignored here; commit `.e2e/cache/` once a CI job should
+replay without a model, which is consulted only when the app changed under a
+step.

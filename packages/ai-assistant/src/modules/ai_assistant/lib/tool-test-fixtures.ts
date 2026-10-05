@@ -1,6 +1,6 @@
 /**
  * Per-tool sample inputs used by `tool-test-runner.ts` (see also the
- * `test-tools` CLI subcommand and `TC-INT-AI-TOOLS.spec.ts`).
+ * `test-tools` CLI subcommand).
  *
  * Inputs are deliberately conservative — every entry is the smallest valid
  * shape that exercises the handler against demo-seeded data. ID-shaped tools

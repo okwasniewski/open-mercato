@@ -102,11 +102,11 @@ For every new feature/function implemented in the phase:
 ### Step 4 — Integration Tests
 
 If the spec defines integration test scenarios (or the phase adds API endpoints / UI flows):
-- Follow the `om-integration-tests` skill workflow (`.agents/skills/om-integration-tests/SKILL.md`)
-- Place tests in `<module>/__integration__/TC-{CATEGORY}-{XXX}.spec.ts`
-- Tests MUST be self-contained: create fixtures in setup, clean up in teardown
-- Tests MUST NOT rely on seeded/demo data
-- Run and verify: `npx playwright test --config .ai/qa/tests/playwright.config.ts <path> --retries=0`
+- Follow the `om-integration-tests` skill workflow (`.ai/skills/om-integration-tests/SKILL.md`)
+- Add tests to `e2e/tests/<area>.e2e.ts` with the `TC-{CATEGORY}-{XXX}` id in the title
+- Tests MUST be self-contained: seed through the `api` fixture, which cleans up after the test
+- Tests MUST NOT rely on seeded data beyond the demo accounts
+- Run and verify: `cd e2e && APP_URL=<url> npm test -- <area>.e2e.ts`
 
 If the spec does not explicitly list integration scenarios but the phase adds significant API or UI behavior, propose test scenarios to the user before writing them.
 

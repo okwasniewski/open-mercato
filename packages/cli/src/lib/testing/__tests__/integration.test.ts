@@ -5,9 +5,6 @@ import { createHash } from 'node:crypto'
 import { createResolver } from '../../resolver'
 import {
   parseEphemeralAppOptions,
-  parseIntegrationCoverageOptions,
-  parseInteractiveIntegrationOptions,
-  parseOptions,
   shouldUseIsolatedPortForFreshEnvironment,
   tryReuseExistingEnvironment,
   writeEphemeralEnvironmentState,
@@ -163,7 +160,6 @@ describe('integration cache and options', () => {
         databaseUrl: 'postgres://integration:integration@127.0.0.1:5432/open_mercato',
         queueBaseDir: '/tmp/open-mercato-queue',
         logPrefix: 'integration',
-        captureScreenshots: true,
       })
 
       const state = await readEphemeralEnvironmentState()
@@ -172,12 +168,10 @@ describe('integration cache and options', () => {
         port: 5001,
         databaseUrl: 'postgres://integration:integration@127.0.0.1:5432/open_mercato',
         queueBaseDir: '/tmp/open-mercato-queue',
-        captureScreenshots: true,
       })
 
       const environment = await tryReuseExistingEnvironment({
         verbose: false,
-        captureScreenshots: true,
         logPrefix: 'integration',
         forceRebuild: false,
       })
@@ -194,7 +188,6 @@ describe('integration cache and options', () => {
       )
       expect(environment?.commandEnvironment.QUEUE_BASE_DIR).toBe('/tmp/open-mercato-queue')
       expect(environment?.commandEnvironment[PRIVATE_ATTACHMENTS_PARTITION_ENV_KEY]).toBe(defaultPrivateAttachmentsRoot)
-      expect(environment?.commandEnvironment.PW_CAPTURE_SCREENSHOTS).toBe('1')
       expect(environment?.commandEnvironment.PLATFORM_PORTAL_BASE_URL).toBe(baseUrl)
       expect(environment?.commandEnvironment.OM_TEST_EMAIL_CAPTURE_PATH).toBe(
         path.join(projectRootDirectory, '.ai', 'qa', 'email-capture.jsonl'),
@@ -217,12 +210,10 @@ describe('integration cache and options', () => {
         databaseUrl: 'postgres://integration:integration@127.0.0.1:5432/open_mercato',
         queueBaseDir: '/tmp/open-mercato-queue',
         logPrefix: 'integration',
-        captureScreenshots: true,
       })
 
       const environment = await tryReuseExistingEnvironment({
         verbose: false,
-        captureScreenshots: true,
         logPrefix: 'integration',
         forceRebuild: false,
       })
@@ -252,12 +243,10 @@ describe('integration cache and options', () => {
         databaseUrl: 'postgres://integration:integration@127.0.0.1:5432/open_mercato',
         queueBaseDir,
         logPrefix: 'integration',
-        captureScreenshots: false,
       })
 
       const environment = await tryReuseExistingEnvironment({
         verbose: false,
-        captureScreenshots: false,
         logPrefix: 'integration',
         forceRebuild: false,
       })
@@ -285,12 +274,10 @@ describe('integration cache and options', () => {
         databaseUrl: 'postgres://integration:integration@127.0.0.1:5432/open_mercato',
         queueBaseDir: '/tmp/open-mercato-queue',
         logPrefix: 'integration',
-        captureScreenshots: true,
       })
 
       const environment = await tryReuseExistingEnvironment({
         verbose: false,
-        captureScreenshots: true,
         logPrefix: 'integration',
         forceRebuild: false,
       })
@@ -322,12 +309,10 @@ describe('integration cache and options', () => {
         databaseUrl: 'postgres://integration:integration@127.0.0.1:5432/open_mercato',
         queueBaseDir: '/tmp/open-mercato-queue',
         logPrefix: 'integration',
-        captureScreenshots: false,
       })
 
       const environment = await tryReuseExistingEnvironment({
         verbose: false,
-        captureScreenshots: false,
         logPrefix: 'integration',
         forceRebuild: false,
       })
@@ -354,12 +339,10 @@ describe('integration cache and options', () => {
         databaseUrl: 'postgres://integration:integration@127.0.0.1:5432/open_mercato',
         queueBaseDir: '/tmp/open-mercato-queue',
         logPrefix: 'integration',
-        captureScreenshots: false,
       })
 
       const environment = await tryReuseExistingEnvironment({
         verbose: false,
-        captureScreenshots: false,
         logPrefix: 'integration',
         forceRebuild: false,
       })
@@ -373,42 +356,10 @@ describe('integration cache and options', () => {
     }
   })
 
-  it('does not reuse an existing ephemeral environment when source requirement does not match', async () => {
-    const baseUrl = 'http://127.0.0.1:5001'
-    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({ status: 200 } as unknown as Response)
-
-    try {
-      await writeEphemeralEnvironmentState({
-        baseUrl,
-        port: 5001,
-        databaseUrl: 'postgres://integration:integration@127.0.0.1:5432/open_mercato',
-        queueBaseDir: '/tmp/open-mercato-queue',
-        logPrefix: 'integration',
-        captureScreenshots: true,
-      })
-
-      const environment = await tryReuseExistingEnvironment({
-        verbose: false,
-        captureScreenshots: true,
-        logPrefix: 'coverage',
-        forceRebuild: false,
-        requiredExistingSource: 'coverage',
-      })
-
-      expect(environment).toBeNull()
-    } finally {
-      fetchSpy.mockRestore()
-    }
-  })
-
-  it('parses --force-rebuild and --no-reuse-env for integration test commands', () => {
-    expect(parseOptions(['--force-rebuild'])).toMatchObject({ forceRebuild: true })
-    expect(parseOptions(['--no-reuse-env'])).toMatchObject({ reuseExisting: false })
+  it('parses --force-rebuild and --no-reuse-env for the ephemeral app command', () => {
     expect(parseEphemeralAppOptions(['--force-rebuild'])).toMatchObject({ forceRebuild: true })
     expect(parseEphemeralAppOptions(['--no-reuse-env'])).toMatchObject({ reuseExisting: false })
-    expect(parseInteractiveIntegrationOptions(['--no-reuse-env'])).toMatchObject({ reuseExisting: false })
-    expect(parseIntegrationCoverageOptions(['--force-rebuild'])).toMatchObject({ forceRebuild: true })
-    expect(parseIntegrationCoverageOptions(['--no-reuse-env'])).toMatchObject({ reuseExisting: false })
+    expect(() => parseEphemeralAppOptions(['--screenshots'])).toThrow('Unknown option: --screenshots')
   })
 
   it('uses isolated port for fresh environment when reuse is disabled or stale state exists', () => {
@@ -417,7 +368,6 @@ describe('integration cache and options', () => {
       baseUrl: 'http://127.0.0.1:5001',
       port: 5001,
       source: 'integration',
-      captureScreenshots: true,
       startedAt: new Date().toISOString(),
     }
 

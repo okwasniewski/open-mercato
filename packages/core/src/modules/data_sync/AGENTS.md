@@ -302,7 +302,6 @@ Data sync providers can leverage the **Unified Module Extension System (UMES)** 
 
 ### Integration Test Expectations
 
-- Module-local integration tests go under `__integration__/`
-- Use helpers from `@open-mercato/core/modules/core/__integration__/helpers/*`
-- Tests must create prerequisites via API and clean up in `finally`
+- Browser and API scenarios go in the repository e2e suite under `e2e/` (see `e2e/README.md`)
+- Tests must create prerequisites via API and clean up after themselves
 - Avoid hard dependency on late-phase modules; keep tests scoped to implemented contracts

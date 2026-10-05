@@ -2,10 +2,9 @@ import fs from 'node:fs'
 
 export const PLAYWRIGHT_BROWSERS_DOCS_URL = 'https://playwright.dev/docs/browsers'
 
-// The preflight has to model the same browser resolution `.ai/qa/tests/playwright.config.ts`
-// performs, or it rejects setups the suite it guards runs fine on: the config honors
-// PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH so containers can supply a system Chromium instead of
-// Playwright's managed download, and `chromium.executablePath()` knows nothing about it.
+// The preflight honors PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH so containers can supply a system
+// Chromium instead of Playwright's managed download; `chromium.executablePath()` knows nothing
+// about it, so the override has to be checked first.
 export function findChromiumPreflightFailure({
   env = process.env,
   resolveManagedExecutablePath,

@@ -352,25 +352,9 @@ The hub's webhook router, OAuth router, send-as-user route, and admin UI auto-di
 - **Webhook auth**: provider webhook routes verify provider signatures via the adapter's `verifyWebhook`. Routes that find no adapter for the `providerKey` return 404, never 5xx.
 - **RBAC**: the hub declares `communication_channels.view` / `.manage` / `.react` / `.assign` / `.connect_user_channel` / `.admin`. Page metadata uses `requireFeatures` (never `requireRoles`).
 
-## Integration tests
+## End-to-end tests
 
-Each slice ships its own module-local integration specs under `__integration__/`:
-
-| Test | Location | What it covers |
-|---|---|---|
-| `TC-045D-001..006` | hub | Hub schema + adapter contract + entity extensions |
-| `TC-CHANNEL-EMAIL-HUB-001..003` | hub | Per-user channel API contract + profile page |
-| `TC-CHANNEL-EMAIL-001..003` | channel-imap | IMAP provider registration + webhook no-op + profile page |
-| `TC-CHANNEL-EMAIL-006..008` | channel-gmail | Gmail OAuth router + webhook no-op + profile page |
-| `TC-CHANNEL-EMAIL-014..020` | hub | Phase 4 cross-provider scenarios: primary swap, admin RBAC, tenant OAuth override, disconnect, send-as-user guard, user-deleted cascade, rich-content widget |
-
-Run with:
-
-```bash
-yarn test:integration                        # full suite
-OM_INTEGRATION_MODULES=communication_channels,channel-imap,channel-gmail \
-  yarn test:integration                      # email-foundation slice only
-```
+Browser and API scenarios for the hub and its providers belong in the agentic e2e suite under `e2e/` (see `e2e/README.md`); unit coverage stays module-local under `__tests__/`.
 
 ## Provider package contract
 

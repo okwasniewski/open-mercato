@@ -5,10 +5,8 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 
-import { chromium } from '@playwright/test'
 import { createAppBin, createStandaloneInstallEnv, ensureVerdaccioPublished, VERDACCIO_URL, runCommand } from './lib/verdaccio'
 import { assertProductionBuildArtifacts } from './lib/standalone-build-artifacts.mjs'
-import { findChromiumPreflightFailure, PLAYWRIGHT_BROWSERS_DOCS_URL } from './lib/playwright-browsers.mjs'
 import {
   EXAMPLE_ACTIVATION_ENTRY,
   assertExampleActivation,
@@ -68,9 +66,7 @@ function withStandaloneBuildNodeOptions(value: string | undefined): string {
   return `${normalized} ${STANDALONE_BUILD_NODE_OPTIONS}`
 }
 
-// The Playwright specs default to `<cwd>/.ai/qa/email-capture.jsonl`, and they run
-// from the monorepo root — mirror that path so the standalone app writes where the
-// specs read (TC-AUTH-033).
+// Keep the captured-email path absolute so the app and any process reading it agree.
 function standaloneEmailCapturePath(): string {
   return path.join(ROOT, '.ai', 'qa', 'email-capture.jsonl')
 }
@@ -87,8 +83,6 @@ function writeStandaloneEnv(appDir: string): void {
     // server process even with NODE_ENV=test below, and customer-portal email links
     // refuse to fall back to localhost there — portal invites 502 without this.
     'PLATFORM_PORTAL_BASE_URL=http://localhost:3000',
-    // The app and the Playwright specs run from different working directories, so
-    // the captured-email path must be absolute and identical on both sides.
     `OM_TEST_EMAIL_CAPTURE_PATH=${standaloneEmailCapturePath()}`,
     'DATABASE_URL=postgres://mercato:secret@localhost:5432/mercato_test',
     'JWT_SECRET=ci-standalone-test-jwt-secret-32-chars-min',
@@ -97,19 +91,15 @@ function writeStandaloneEnv(appDir: string): void {
     'OM_TEST_MODE=1',
     'OM_TEST_AUTH_RATE_LIMIT_MODE=opt-in',
     // Registers the network-free `push_stub` channel adapter (inert unless a
-    // delivery row carries provider='push_stub'). Mirrors the ephemeral harness,
-    // which sets it on both the app server and the Playwright process; without it
-    // TC-PUSH-003 resolves no adapter and every delivery lands in `failed`.
+    // delivery row carries provider='push_stub'). Mirrors the ephemeral harness.
     'OM_ENABLE_PUSH_STUB_ADAPTER=1',
     // Documents collaboration. NEXT_PUBLIC_* is inlined at build time, so it must be
-    // in the app .env before the build; the sidecar the Playwright process starts
-    // verifies the tokens this app mints, so both halves share one secret.
+    // in the app .env before the build; the sidecar verifies the tokens this app mints.
     'NEXT_PUBLIC_DOCUMENTS_COLLAB_URL=ws://127.0.0.1:4101',
     'DOCUMENTS_COLLAB_JWT_SECRET_V2=local-standalone-documents-collab-v2-secret-32b',
     // Required for the loopback collab URL above to be accepted: the server runs
     // with NODE_ENV=production and resolveDocumentsCollaborationEndpoint() rejects a
-    // loopback ws:// host there unless this opts in. App-side only — in the Playwright
-    // process the same variable opts TC-DOCUMENTS-017's realtime spec in instead.
+    // loopback ws:// host there unless this opts in.
     'OM_DOCUMENTS_COLLAB_INTEGRATION=1',
     'OM_DISABLE_EMAIL_DELIVERY=1',
     'OM_WEBHOOKS_ALLOW_PRIVATE_URLS=1',
@@ -132,12 +122,6 @@ function writeStandaloneEnv(appDir: string): void {
   fs.writeFileSync(envPath, `${envLines.join('\n')}\n`)
 }
 
-function rootIntegrationArgs(): string[] {
-  const separator = process.argv.indexOf('--')
-  const rawArgs = separator === -1 ? process.argv.slice(2) : process.argv.slice(separator + 1)
-  return rawArgs.filter((arg) => arg !== '--cleanup')
-}
-
 async function waitForStandaloneEphemeralApp(params: {
   appDir: string
   env: NodeJS.ProcessEnv
@@ -154,7 +138,7 @@ async function waitForStandaloneEphemeralApp(params: {
   let databaseUrl: string | null = null
   let exited: { code: number | null; signal: NodeJS.Signals | null } | null = null
   let outputBuffer = ''
-  const child = spawn('yarn', ['mercato', 'test:ephemeral', '--no-reuse-env', '--no-screenshots'], {
+  const child = spawn('yarn', ['mercato', 'test:ephemeral', '--no-reuse-env'], {
     cwd: params.appDir,
     env: { ...process.env, ...params.env },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -216,25 +200,8 @@ async function stopStandaloneEphemeralApp(child: ChildProcessWithoutNullStreams 
   ])
 }
 
-function ensurePlaywrightBrowsersInstalled(): void {
-  const failure = findChromiumPreflightFailure({
-    resolveManagedExecutablePath: () => chromium.executablePath(),
-  })
-  if (!failure) return
-
-  console.error(red(failure.message))
-  for (const remedy of failure.remedies) {
-    console.error(yellow(`  ${remedy}`))
-  }
-  console.error(cyan(`See: ${PLAYWRIGHT_BROWSERS_DOCS_URL}`))
-  process.exit(1)
-}
-
 async function main(): Promise<void> {
-  ensurePlaywrightBrowsersInstalled()
-
   const cleanup = process.argv.includes('--cleanup')
-  const testArgs = rootIntegrationArgs()
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'create-mercato-app-integration-'))
   const appDir = path.join(tempRoot, 'standalone-app')
   const standaloneInstallEnv = createStandaloneInstallEnv(tempRoot)
@@ -284,7 +251,6 @@ async function main(): Promise<void> {
     runCommand(process.execPath, [CREATE_APP_BIN, appDir, '--registry', VERDACCIO_URL, '--skip-agentic-setup'], { cwd: ROOT })
 
     assertExists(path.join(appDir, 'package.json'), 'Scaffolded standalone app created')
-    assertExists(path.join(appDir, '.ai', 'qa', 'tests', 'playwright.config.ts'), 'Standalone QA config present')
     const yarnConfig = fs.readFileSync(path.join(appDir, '.yarnrc.yml'), 'utf8')
     if (!yarnConfig.includes(`npmRegistryServer: "${VERDACCIO_URL}"`)) {
       throw new Error(`Scaffolded standalone app does not use the published Verdaccio registry: ${VERDACCIO_URL}`)
@@ -323,26 +289,7 @@ async function main(): Promise<void> {
     })
     standaloneProcess = standalone.process
 
-    console.log(cyan(`Running monorepo integration tests against standalone app at ${standalone.baseUrl}`))
-    if (testArgs.length > 0) {
-      console.log(cyan(`Playwright args: ${testArgs.join(' ')}`))
-    }
-    runCommand('yarn', ['test:integration', ...testArgs], {
-      cwd: ROOT,
-      env: {
-        ...integrationEnv,
-        BASE_URL: standalone.baseUrl,
-        APP_URL: standalone.baseUrl,
-        NEXT_PUBLIC_APP_URL: standalone.baseUrl,
-        DATABASE_URL: standalone.databaseUrl,
-        OM_TEST_APP_ROOT: appDir,
-      },
-    })
-
-    assertExists(
-      path.join(ROOT, '.ai', 'qa', 'test-results', 'results.json'),
-      'Monorepo integration results written',
-    )
+    console.log(green(`✔ Standalone ephemeral app is serving at ${standalone.baseUrl}`))
 
     console.log(green('\ncreate-mercato-app standalone integration test passed'))
     console.log(cyan(`App path: ${appDir}`))

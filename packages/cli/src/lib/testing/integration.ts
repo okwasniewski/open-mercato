@@ -5,23 +5,17 @@ import { existsSync, readFileSync } from 'node:fs'
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { createHash, randomBytes } from 'node:crypto'
 import path from 'node:path'
-import { createInterface, type Interface } from 'node:readline/promises'
-import { stdin as input, stdout as output } from 'node:process'
 import spawn from 'cross-spawn'
 import { fetchWithTimeout, type FetchWithTimeoutInit } from '@open-mercato/shared/lib/http/fetchWithTimeout'
 import { resolveEnvironment } from '../resolver'
 import { resolveSpawnCommand } from '../spawn'
-import { discoverIntegrationSpecFiles as discoverIntegrationSpecFilesShared } from './integration-discovery'
 import { resolveDockerHostFromContext, runCommandAndCapture } from './runtime-utils'
 
 type EphemeralRuntimeOptions = {
   verbose: boolean
-  captureScreenshots: boolean
   logPrefix: string
   forceRebuild?: boolean
   reuseExisting?: boolean
-  requiredExistingSource?: string
-  environmentOverrides?: NodeJS.ProcessEnv
 }
 
 const TEST_EMAIL_CAPTURE_ACCESS_TOKEN =
@@ -38,99 +32,10 @@ export type EphemeralEnvironmentHandle = {
   stop: () => Promise<void>
 }
 
-type IntegrationOptions = {
-  keep: boolean
-  filter: string | null
-  captureScreenshots: boolean
-  verbose: boolean
-  forceRebuild: boolean
-  reuseExisting: boolean
-}
-
 type EphemeralAppOptions = {
   verbose: boolean
-  captureScreenshots: boolean
   forceRebuild: boolean
   reuseExisting: boolean
-}
-
-type InteractiveIntegrationOptions = {
-  verbose: boolean
-  captureScreenshots: boolean
-  workers: number | null
-  retries: number | null
-  forceRebuild: boolean
-  reuseExisting: boolean
-}
-
-type IntegrationSpecTarget = {
-  path: string
-  description: string
-}
-
-type DiscoveredIntegrationSpecFile = {
-  path: string
-  moduleName: string | null
-  isOverlay: boolean
-  requiredModules: string[]
-}
-
-type IntegrationCoverageOptions = {
-  filter: string | null
-  captureScreenshots: boolean
-  verbose: boolean
-  workers: number | null
-  retries: number | null
-  shard: string | null
-  json: boolean
-  keepRawV8: boolean
-  forceRebuild: boolean
-  reuseExisting: boolean
-}
-
-type IntegrationSpecCoverageOptions = {
-  json: boolean
-  strict: boolean
-}
-
-type IntegrationCoverageReport = {
-  generatedAt: string
-  testRun: IntegrationTestRunSummary | null
-  scenarios: {
-    total: number
-    covered: number
-    uncovered: number
-    coveragePercent: number
-  }
-  tests: {
-    total: number
-    withScenario: number
-    withoutScenario: number
-  }
-  categories: Array<{
-    code: string
-    scenarioCount: number
-    coveredScenarioCount: number
-    testCount: number
-    coveragePercent: number | null
-  }>
-  requiredTestFolders: {
-    present: string[]
-    missing: string[]
-  }
-  uncoveredScenarioIds: string[]
-  testsWithoutScenarioIds: string[]
-}
-
-type IntegrationTestRunSummary = {
-  status: 'passed' | 'failed'
-  total: number
-  passed: number
-  failed: number
-  flaky: number
-  skipped: number
-  durationMs: number | null
-  startTime: string | null
 }
 
 export function shouldUseIsolatedPortForFreshEnvironment(options: {
@@ -147,12 +52,7 @@ type EphemeralEnvironmentState = {
   databaseUrl: string
   queueBaseDir: string
   source: string
-  captureScreenshots: boolean
   startedAt: string
-}
-
-type PlaywrightRunOptions = Pick<InteractiveIntegrationOptions, 'verbose' | 'captureScreenshots' | 'workers' | 'retries'> & {
-  shard?: string | null
 }
 
 const DEFAULT_APP_READY_TIMEOUT_MS = 90_000
@@ -188,19 +88,6 @@ export function resolveEphemeralPostgresImage(env: NodeJS.ProcessEnv = process.e
 export function ephemeralPostgresInitSql(): string {
   return EPHEMERAL_POSTGRES_INIT_SQL
 }
-const PLAYWRIGHT_ENV_UNAVAILABLE_PATTERNS: RegExp[] = [
-  /net::ERR_CONNECTION_REFUSED/i,
-  /Failed to connect to .* (localhost|127\.0\.0\.1)/i,
-  /Error: connect ECONNREFUSED/i,
-  /Error: read ECONNRESET/i,
-  /socket hang up/i,
-  /ERR_CONNECTION_RESET/i,
-  /ERR_ADDRESS_UNREACHABLE/i,
-]
-const PLAYWRIGHT_QUICK_FAILURE_THRESHOLD = 6
-const PLAYWRIGHT_QUICK_FAILURE_MAX_DURATION_MS = 1_500
-const PLAYWRIGHT_HEALTH_PROBE_INTERVAL_MS = 3_000
-const ANSI_ESCAPE_REGEX = /\x1b\[[0-?]*[ -/]*[@-~]/g // NOSONAR — ANSI escape sequence pattern
 const env = resolveEnvironment()
 const projectRootDirectory = env.rootDir
 const appDirectory = env.appDir
@@ -291,9 +178,6 @@ const EPHEMERAL_PRIVATE_ATTACHMENTS_ROOT = path.join(
   'attachments',
   'privateAttachments',
 )
-const PLAYWRIGHT_INTEGRATION_CONFIG_PATH = '.ai/qa/tests/playwright.config.ts'
-const PLAYWRIGHT_RESULTS_JSON_PATH = path.join(projectRootDirectory, '.ai', 'qa', 'test-results', 'results.json')
-const LEGACY_INTEGRATION_TEST_ROOT = path.join(projectRootDirectory, '.ai', 'qa', 'tests')
 const NEXT_BUILD_OUTPUT_DIRECTORIES = [
   path.join(appDirectory, '.mercato', 'next'),
   path.join(appDirectory, '.next'),
@@ -320,16 +204,6 @@ const APP_BUILD_INPUT_PATHS = collectExistingPaths([
   path.join(projectRootDirectory, 'tsconfig.base.json'),
   path.join(projectRootDirectory, 'yarn.lock'),
 ])
-const EXPECTED_TEST_FOLDERS = ['auth', 'catalog', 'crm', 'sales', 'admin', 'api', 'integration'] as const
-const FOLDER_TO_CATEGORY_CODE: Record<string, string> = {
-  admin: 'ADMIN',
-  auth: 'AUTH',
-  catalog: 'CAT',
-  crm: 'CRM',
-  sales: 'SALES',
-  api: 'API',
-  integration: 'INT',
-}
 const BACKEND_BROWSER_AUTH_REDIRECT_LIMIT = 6
 const BUILD_CACHE_STATE_VERSION = 2
 const BUILD_CACHE_ENV_KEYS = [
@@ -370,23 +244,6 @@ type BuildCacheOptions = {
   environmentFingerprint?: string
 }
 
-type CommandOutputMonitoringResult = {
-  exitCode: number | null
-  output: string
-  environmentUnavailableFromOutput: boolean
-}
-
-type IntegrationCommandError = Error & {
-  environmentUnavailableFromOutput?: boolean
-  commandOutput?: string
-}
-
-type CommandMonitoringOptions = {
-  detectEnvironmentUnavailable?: boolean
-  abortOnEnvironmentUnavailable?: boolean
-  playwrightFailureHealthCheck?: PlaywrightFailureHealthCheckOptions
-}
-
 type LoginPageProbeResult = {
   status: number | null
   healthy: boolean
@@ -419,13 +276,6 @@ type ApplicationReadinessProbeResult = {
   backend: BackendLoginProbeResult
   authenticated: AuthenticatedApiProbeResult
   backendBrowserAuth: BackendBrowserAuthProbeResult
-}
-
-type PlaywrightFailureHealthCheckOptions = {
-  baseUrl: string
-  consecutiveFailureThreshold?: number
-  quickFailureMaxDurationMs?: number
-  minProbeIntervalMs?: number
 }
 
 type TimedStepOptions = {
@@ -496,224 +346,6 @@ async function runTimedStep<T>(
   }
 }
 
-function isPlaywrightEnvironmentUnavailableChunk(chunk: string): boolean {
-  return PLAYWRIGHT_ENV_UNAVAILABLE_PATTERNS.some((pattern) => pattern.test(chunk))
-}
-
-function stripAnsiSequences(value: string): string {
-  return value.replace(ANSI_ESCAPE_REGEX, '')
-}
-
-function parsePlaywrightResultLine(line: string): { kind: 'pass' | 'fail'; durationMs: number } | null {
-  const normalized = line.trim()
-  if (!normalized) {
-    return null
-  }
-
-  const symbolMatch = normalized.match(/^\s*([✓✔✘xX])\s+\d+\s+/u)
-  if (!symbolMatch) {
-    return null
-  }
-
-  const durationMatches = Array.from(normalized.matchAll(/\(([\d.]+)(ms|s)\)/g))
-  const lastDurationMatch = durationMatches.at(-1)
-  if (!lastDurationMatch) {
-    return null
-  }
-
-  const symbol = symbolMatch[1]
-  const rawDuration = Number.parseFloat(lastDurationMatch[1] ?? '')
-  const unit = lastDurationMatch[2]
-  if (!Number.isFinite(rawDuration) || rawDuration < 0) {
-    return null
-  }
-
-  const durationMs = unit === 's' ? Math.round(rawDuration * 1000) : Math.round(rawDuration)
-  return {
-    kind: symbol === '✘' || symbol.toLowerCase() === 'x' ? 'fail' : 'pass',
-    durationMs,
-  }
-}
-
-async function runCommandWithOutputMonitoring(
-  command: string,
-  commandArgs: string[],
-  environment: NodeJS.ProcessEnv,
-  opts: CommandMonitoringOptions = {},
-): Promise<CommandOutputMonitoringResult> {
-  return new Promise((resolve, reject) => {
-    const resolvedSpawn = resolveSpawnCommand(command, commandArgs)
-    const commandHandle = spawn(resolvedSpawn.command, resolvedSpawn.args, {
-      cwd: projectRootDirectory,
-      env: environment,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      ...resolvedSpawn.spawnOptions,
-    })
-
-    let output = ''
-    let environmentUnavailableFromOutput = false
-    let terminatedByOutput = false
-    let trailingOutputLine = ''
-    let consecutiveQuickFailures = 0
-    let lastHealthProbeAt = 0
-    let healthProbeQueue: Promise<void> = Promise.resolve()
-
-    const failureHealthCheck = opts.playwrightFailureHealthCheck
-    const quickFailureThreshold = failureHealthCheck?.consecutiveFailureThreshold ?? PLAYWRIGHT_QUICK_FAILURE_THRESHOLD
-    const quickFailureMaxDurationMs = failureHealthCheck?.quickFailureMaxDurationMs ?? PLAYWRIGHT_QUICK_FAILURE_MAX_DURATION_MS
-    const minProbeIntervalMs = failureHealthCheck?.minProbeIntervalMs ?? PLAYWRIGHT_HEALTH_PROBE_INTERVAL_MS
-
-    const maybeProbeEnvironmentHealth = () => {
-      if (!failureHealthCheck || terminatedByOutput || environmentUnavailableFromOutput) {
-        return
-      }
-      if (consecutiveQuickFailures < quickFailureThreshold) {
-        return
-      }
-      const now = Date.now()
-      if (now - lastHealthProbeAt < minProbeIntervalMs) {
-        return
-      }
-      lastHealthProbeAt = now
-      healthProbeQueue = healthProbeQueue
-        .then(async () => {
-          const unavailable = await isEnvironmentUnavailable(failureHealthCheck.baseUrl)
-          if (unavailable && !terminatedByOutput) {
-            environmentUnavailableFromOutput = true
-            terminatedByOutput = true
-            commandHandle.kill('SIGTERM')
-          }
-        })
-        .catch(() => undefined)
-    }
-
-    const processOutputLine = (line: string) => {
-      const parsed = parsePlaywrightResultLine(line)
-      if (!parsed) {
-        return
-      }
-      if (parsed.kind === 'pass') {
-        consecutiveQuickFailures = 0
-        return
-      }
-
-      if (parsed.durationMs <= quickFailureMaxDurationMs) {
-        consecutiveQuickFailures += 1
-        maybeProbeEnvironmentHealth()
-        return
-      }
-
-      consecutiveQuickFailures = 0
-    }
-
-    const handleChunk = (chunk: Buffer | string, stream: 'stdout' | 'stderr') => {
-      const text = chunk.toString()
-      const normalizedText = stripAnsiSequences(text)
-      if (stream === 'stdout') {
-        process.stdout.write(text)
-      } else {
-        process.stderr.write(text)
-      }
-
-      output += text
-      if (output.length > 120_000) {
-        output = output.slice(-80_000)
-      }
-
-      if (
-        !environmentUnavailableFromOutput &&
-        opts.detectEnvironmentUnavailable &&
-        isPlaywrightEnvironmentUnavailableChunk(normalizedText)
-      ) {
-        environmentUnavailableFromOutput = true
-        if (opts.abortOnEnvironmentUnavailable) {
-          terminatedByOutput = true
-          commandHandle.kill('SIGTERM')
-        }
-      }
-
-      trailingOutputLine += normalizedText
-      let newlineIndex = trailingOutputLine.indexOf('\n')
-      while (newlineIndex >= 0) {
-        const currentLine = trailingOutputLine.slice(0, newlineIndex).replace(/\r$/, '')
-        processOutputLine(currentLine)
-        trailingOutputLine = trailingOutputLine.slice(newlineIndex + 1)
-        newlineIndex = trailingOutputLine.indexOf('\n')
-      }
-    }
-
-    commandHandle.stdout?.on('data', (chunk) => {
-      handleChunk(chunk, 'stdout')
-    })
-    commandHandle.stderr?.on('data', (chunk) => {
-      handleChunk(chunk, 'stderr')
-    })
-    commandHandle.on('error', reject)
-    commandHandle.on('exit', (code: number | null) => {
-      if (trailingOutputLine.trim().length > 0) {
-        processOutputLine(trailingOutputLine.trimEnd())
-      }
-      healthProbeQueue.finally(() => {
-        resolve({
-          exitCode: code,
-          output: output.trim(),
-          environmentUnavailableFromOutput: environmentUnavailableFromOutput || terminatedByOutput,
-        })
-      })
-    })
-  })
-}
-
-function createMonitoredCommandError(
-  commandLabel: string,
-  args: string[],
-  result: CommandOutputMonitoringResult,
-): IntegrationCommandError {
-  const error = new Error(
-    `Command failed: ${commandLabel} ${args.join(' ')} (exit ${result.exitCode ?? 'unknown'}).`,
-  ) as IntegrationCommandError
-  error.environmentUnavailableFromOutput = result.environmentUnavailableFromOutput
-  error.commandOutput = result.output
-  return error
-}
-
-async function runYarnCommandWithOutputMonitoring(
-  args: string[],
-  environment: NodeJS.ProcessEnv,
-  opts: CommandMonitoringOptions = {},
-): Promise<void> {
-  const result = await runCommandWithOutputMonitoring(resolveYarnBinary(), ['run', ...args], environment, {
-    detectEnvironmentUnavailable: opts.detectEnvironmentUnavailable,
-    abortOnEnvironmentUnavailable: opts.abortOnEnvironmentUnavailable,
-    playwrightFailureHealthCheck: opts.playwrightFailureHealthCheck,
-  })
-
-  if (result.exitCode === 0) {
-    return
-  }
-
-  throw createMonitoredCommandError('yarn', ['run', ...args], result)
-}
-
-async function runNpxCommandWithOutputMonitoring(
-  args: string[],
-  environment: NodeJS.ProcessEnv,
-  opts: CommandMonitoringOptions = {},
-): Promise<void> {
-  const binary = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-  const result = await runCommandWithOutputMonitoring(binary, args, environment, {
-    detectEnvironmentUnavailable: opts.detectEnvironmentUnavailable,
-    abortOnEnvironmentUnavailable: opts.abortOnEnvironmentUnavailable,
-    playwrightFailureHealthCheck: opts.playwrightFailureHealthCheck,
-  })
-
-  if (result.exitCode === 0) {
-    return
-  }
-
-  throw createMonitoredCommandError('npx', args, result)
-}
-
 function runYarnRawCommand(
   commandArgs: string[],
   environment: NodeJS.ProcessEnv,
@@ -748,27 +380,6 @@ function runYarnRawCommand(
         ? `\nLast output:\n${bufferedOutput.trim().split('\n').slice(-20).join('\n')}`
         : ''
       reject(new Error(`Command failed: yarn ${commandArgs.join(' ')} (exit ${code ?? 'unknown'})${extra}`))
-    })
-  })
-}
-
-function runNpxCommand(args: string[], environment: NodeJS.ProcessEnv): Promise<void> {
-  const binary = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-  return new Promise((resolve, reject) => {
-    const resolvedSpawn = resolveSpawnCommand(binary, args)
-    const command = spawn(resolvedSpawn.command, resolvedSpawn.args, {
-      cwd: projectRootDirectory,
-      env: environment,
-      stdio: 'inherit',
-      ...resolvedSpawn.spawnOptions,
-    })
-    command.on('error', reject)
-    command.on('exit', (code) => {
-      if (code === 0) {
-        resolve()
-        return
-      }
-      reject(new Error(`Command failed: npx ${args.join(' ')} (exit ${code ?? 'unknown'})`))
     })
   })
 }
@@ -868,7 +479,7 @@ function assertNode24Runtime(): void {
     [
       'Unsupported Node.js runtime for ephemeral integration tests.',
       `Cause: Detected Node ${process.versions.node}, but this repository requires Node 24.x.`,
-      'What to do: switch your shell to Node 24 (for example `nvm use 24`), reinstall dependencies (`yarn install`), then retry `yarn test:integration:ephemeral`.',
+      'What to do: switch your shell to Node 24 (for example `nvm use 24`), reinstall dependencies (`yarn install`), then retry `yarn test:ephemeral:start`.',
     ].join(' '),
   )
 }
@@ -1302,7 +913,6 @@ export async function writeEphemeralEnvironmentState(input: {
   databaseUrl: string
   queueBaseDir: string
   logPrefix: string
-  captureScreenshots: boolean
 }): Promise<void> {
   const content: EphemeralEnvironmentState = {
     status: 'running',
@@ -1311,7 +921,6 @@ export async function writeEphemeralEnvironmentState(input: {
     databaseUrl: input.databaseUrl,
     queueBaseDir: input.queueBaseDir,
     source: input.logPrefix,
-    captureScreenshots: input.captureScreenshots,
     startedAt: new Date().toISOString(),
   }
   await writeFile(EPHEMERAL_ENV_FILE_PATH, `${JSON.stringify(content, null, 2)}\n`, 'utf8')
@@ -1363,9 +972,6 @@ export async function readEphemeralEnvironmentState(): Promise<EphemeralEnvironm
   if (typeof record.source !== 'string' || record.source.length === 0) {
     return null
   }
-  if (typeof record.captureScreenshots !== 'boolean') {
-    return null
-  }
   if (typeof record.startedAt !== 'string' || record.startedAt.length === 0) {
     return null
   }
@@ -1377,7 +983,6 @@ export async function readEphemeralEnvironmentState(): Promise<EphemeralEnvironm
     databaseUrl: record.databaseUrl,
     queueBaseDir: record.queueBaseDir,
     source: record.source,
-    captureScreenshots: record.captureScreenshots,
     startedAt: record.startedAt,
   }
 }
@@ -1962,7 +1567,7 @@ export function registerEphemeralShutdownHandlers(options: {
         } finally {
           dispose()
           // Load-bearing, not cleanup: `dispose()` already detached this module's `once` handler, so
-          // the only listeners left belong to somebody else (testcontainers, Playwright, a host CLI).
+          // the only listeners left belong to somebody else (testcontainers, the e2e runner, a host CLI).
           // Any survivor would swallow the re-raised signal and turn the interrupt back into the
           // synthetic success this whole path exists to avoid, so they come off before the re-raise.
           processRef.removeAllListeners(signal)
@@ -2145,7 +1750,6 @@ function buildReusableEnvironment(
   baseUrl: string,
   databaseUrl: string,
   queueBaseDir: string,
-  captureScreenshots: boolean,
 ): NodeJS.ProcessEnv {
   const enterpriseModulesFlag = process.env.OM_ENABLE_ENTERPRISE_MODULES ?? 'false'
   const privateAttachmentsRoot = resolvePrivateAttachmentsRootForQueueBaseDir(queueBaseDir)
@@ -2197,7 +1801,7 @@ function buildReusableEnvironment(
     EMAIL_FROM: process.env.EMAIL_FROM ?? 'system@test-seed.local',
     NOTIFICATIONS_EMAIL_FROM: process.env.NOTIFICATIONS_EMAIL_FROM ?? 'notifications@test-seed.local',
     ADMIN_EMAIL: process.env.ADMIN_EMAIL ?? 'admin@test-seed.local',
-    // Register the test-only `push_stub` channel adapter in the reused Playwright
+    // Register the test-only `push_stub` channel adapter in the reused test
     // process (and any drain/worker child it spawns) so push integration specs can
     // drive real delivery. Production-safe + inert unless a delivery row carries
     // `provider='push_stub'`. Mirrors the fresh-environment app server env below.
@@ -2220,7 +1824,7 @@ function buildReusableEnvironment(
     // the var at the workflow level, the same gap the MOCK_INBOUND_WEBHOOK_SECRET
     // note below describes. Keep in sync with the app-server env block.
     SELF_SERVICE_ONBOARDING_ENABLED: process.env.SELF_SERVICE_ONBOARDING_ENABLED ?? 'true',
-    // Keep the bus in the Playwright process (used by in-test queue-drain helpers)
+    // Keep the bus in the test process (used by in-test queue-drain helpers)
     // on the same delivery mode as the app server it drives: inline persistent
     // delivery so event side effects are deterministic for assertions. See the
     // matching OM_EVENTS_SINGLE_DELIVERY note on the app server environment below.
@@ -2238,7 +1842,6 @@ function buildReusableEnvironment(
     [PRIVATE_ATTACHMENTS_PARTITION_ENV_KEY]:
       process.env[PRIVATE_ATTACHMENTS_PARTITION_ENV_KEY] ?? privateAttachmentsRoot,
     NODE_NO_WARNINGS: '1',
-    PW_CAPTURE_SCREENSHOTS: captureScreenshots ? '1' : '0',
   })
 }
 
@@ -2257,13 +1860,6 @@ function resolvePrivateAttachmentsRootForQueueBaseDir(queueBaseDir: string): str
 export async function tryReuseExistingEnvironment(options: EphemeralRuntimeOptions): Promise<EphemeralEnvironmentHandle | null> {
   const state = await readEphemeralEnvironmentState()
   if (!state) {
-    return null
-  }
-
-  if (options.requiredExistingSource && state.source !== options.requiredExistingSource) {
-    console.log(
-      `[${options.logPrefix}] Existing ephemeral environment source "${state.source}" does not match required "${options.requiredExistingSource}".`,
-    )
     return null
   }
 
@@ -2296,11 +1892,6 @@ export async function tryReuseExistingEnvironment(options: EphemeralRuntimeOptio
     }
   }
 
-  if (options.captureScreenshots !== state.captureScreenshots) {
-    console.log(
-      `[${options.logPrefix}] Reusing screenshot capture setting from ${EPHEMERAL_ENV_FILE_PATH}: ${state.captureScreenshots ? 'enabled' : 'disabled'}.`,
-    )
-  }
   console.log(`[${options.logPrefix}] Reusing existing ephemeral environment at ${state.baseUrl}.`)
   return {
     baseUrl: state.baseUrl,
@@ -2310,7 +1901,6 @@ export async function tryReuseExistingEnvironment(options: EphemeralRuntimeOptio
       state.baseUrl,
       state.databaseUrl,
       state.queueBaseDir,
-      state.captureScreenshots,
     ),
     ownedByCurrentProcess: false,
     stop: async () => {},
@@ -2398,80 +1988,8 @@ export async function waitForApplicationReadiness(
   )
 }
 
-export function parseOptions(rawArgs: string[]): IntegrationOptions {
-  let keep = false
-  let filter: string | null = null
-  let captureScreenshots: boolean | null = null
-  let verbose = false
-  let forceRebuild = false
-  let reuseExisting = true
-
-  for (let index = 0; index < rawArgs.length; index += 1) {
-    const argument = rawArgs[index]
-    if (argument === '--keep') {
-      keep = true
-      continue
-    }
-    if (argument === '--screenshots') {
-      captureScreenshots = true
-      continue
-    }
-    if (argument === '--no-screenshots') {
-      captureScreenshots = false
-      continue
-    }
-    if (argument === '--verbose') {
-      verbose = true
-      continue
-    }
-    if (argument === '--force-rebuild') {
-      forceRebuild = true
-      continue
-    }
-    if (argument === '--no-reuse-env') {
-      reuseExisting = false
-      continue
-    }
-    if (argument === '--filter') {
-      const nextValue = rawArgs[index + 1]
-      if (!nextValue || nextValue.startsWith('--')) {
-        throw new Error('Missing value for --filter')
-      }
-      filter = nextValue
-      index += 1
-      continue
-    }
-    if (argument.startsWith('--filter=')) {
-      const filterValue = argument.slice('--filter='.length).trim()
-      if (!filterValue) {
-        throw new Error('Missing value for --filter')
-      }
-      filter = filterValue
-      continue
-    }
-    if (!argument.startsWith('--') && !filter) {
-      filter = argument
-      continue
-    }
-    if (argument.startsWith('--')) {
-      throw new Error(`Unknown option: ${argument}`)
-    }
-  }
-
-  const defaultCaptureScreenshots = process.env.CI !== 'true'
-  return {
-    keep,
-    filter,
-    captureScreenshots: captureScreenshots ?? defaultCaptureScreenshots,
-    verbose,
-    forceRebuild,
-    reuseExisting,
-  }
-}
-
 export function parseEphemeralAppOptions(rawArgs: string[]): EphemeralAppOptions {
   let verbose = false
-  let captureScreenshots: boolean | null = null
   let forceRebuild = false
   let reuseExisting = true
 
@@ -2480,14 +1998,6 @@ export function parseEphemeralAppOptions(rawArgs: string[]): EphemeralAppOptions
       verbose = true
       continue
     }
-    if (argument === '--screenshots') {
-      captureScreenshots = true
-      continue
-    }
-    if (argument === '--no-screenshots') {
-      captureScreenshots = false
-      continue
-    }
     if (argument === '--force-rebuild') {
       forceRebuild = true
       continue
@@ -2499,963 +2009,16 @@ export function parseEphemeralAppOptions(rawArgs: string[]): EphemeralAppOptions
     throw new Error(`Unknown option: ${argument}`)
   }
 
-  const defaultCaptureScreenshots = process.env.CI !== 'true'
   return {
     verbose,
-    captureScreenshots: captureScreenshots ?? defaultCaptureScreenshots,
     forceRebuild,
     reuseExisting,
   }
-}
-
-export function parseInteractiveIntegrationOptions(rawArgs: string[]): InteractiveIntegrationOptions {
-  let verbose = false
-  let captureScreenshots: boolean | null = null
-  let workers: number | null = null
-  let retries: number | null = null
-  let forceRebuild = false
-  let reuseExisting = true
-
-  for (let index = 0; index < rawArgs.length; index += 1) {
-    const argument = rawArgs[index]
-    if (argument === '--verbose') {
-      verbose = true
-      continue
-    }
-    if (argument === '--screenshots') {
-      captureScreenshots = true
-      continue
-    }
-    if (argument === '--no-screenshots') {
-      captureScreenshots = false
-      continue
-    }
-    if (argument === '--force-rebuild') {
-      forceRebuild = true
-      continue
-    }
-    if (argument === '--no-reuse-env') {
-      reuseExisting = false
-      continue
-    }
-    if (argument === '--workers') {
-      const value = rawArgs[index + 1]
-      if (!value || value.startsWith('--')) {
-        throw new Error('Missing value for --workers')
-      }
-      const parsed = Number.parseInt(value, 10)
-      if (!Number.isFinite(parsed) || parsed < 1) {
-        throw new Error(`Invalid --workers value: ${value}`)
-      }
-      workers = parsed
-      index += 1
-      continue
-    }
-    if (argument.startsWith('--workers=')) {
-      const value = argument.slice('--workers='.length)
-      const parsed = Number.parseInt(value, 10)
-      if (!Number.isFinite(parsed) || parsed < 1) {
-        throw new Error(`Invalid --workers value: ${value}`)
-      }
-      workers = parsed
-      continue
-    }
-    if (argument === '--retries') {
-      const value = rawArgs[index + 1]
-      if (!value || value.startsWith('--')) {
-        throw new Error('Missing value for --retries')
-      }
-      const parsed = Number.parseInt(value, 10)
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        throw new Error(`Invalid --retries value: ${value}`)
-      }
-      retries = parsed
-      index += 1
-      continue
-    }
-    if (argument.startsWith('--retries=')) {
-      const value = argument.slice('--retries='.length)
-      const parsed = Number.parseInt(value, 10)
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        throw new Error(`Invalid --retries value: ${value}`)
-      }
-      retries = parsed
-      continue
-    }
-    throw new Error(`Unknown option: ${argument}`)
-  }
-
-  const defaultCaptureScreenshots = process.env.CI !== 'true'
-  return {
-    verbose,
-    captureScreenshots: captureScreenshots ?? defaultCaptureScreenshots,
-    workers,
-    retries,
-    forceRebuild,
-    reuseExisting,
-  }
-}
-
-export function parseIntegrationCoverageOptions(rawArgs: string[]): IntegrationCoverageOptions {
-  let filter: string | null = null
-  let captureScreenshots: boolean | null = null
-  let verbose = false
-  let workers: number | null = null
-  let retries: number | null = null
-  let shard: string | null = null
-  let json = false
-  let keepRawV8 = false
-  let forceRebuild = false
-  let reuseExisting = true
-
-  for (let index = 0; index < rawArgs.length; index += 1) {
-    const argument = rawArgs[index]
-    if (argument === '--filter') {
-      const nextValue = rawArgs[index + 1]
-      if (!nextValue || nextValue.startsWith('--')) {
-        throw new Error('Missing value for --filter')
-      }
-      filter = nextValue
-      index += 1
-      continue
-    }
-    if (argument.startsWith('--filter=')) {
-      const filterValue = argument.slice('--filter='.length).trim()
-      if (!filterValue) {
-        throw new Error('Missing value for --filter')
-      }
-      filter = filterValue
-      continue
-    }
-    if (!argument.startsWith('--') && !filter) {
-      filter = argument
-      continue
-    }
-    if (argument === '--verbose') {
-      verbose = true
-      continue
-    }
-    if (argument === '--screenshots') {
-      captureScreenshots = true
-      continue
-    }
-    if (argument === '--no-screenshots') {
-      captureScreenshots = false
-      continue
-    }
-    if (argument === '--workers') {
-      const value = rawArgs[index + 1]
-      if (!value || value.startsWith('--')) {
-        throw new Error('Missing value for --workers')
-      }
-      const parsed = Number.parseInt(value, 10)
-      if (!Number.isFinite(parsed) || parsed < 1) {
-        throw new Error(`Invalid --workers value: ${value}`)
-      }
-      workers = parsed
-      index += 1
-      continue
-    }
-    if (argument.startsWith('--workers=')) {
-      const value = argument.slice('--workers='.length)
-      const parsed = Number.parseInt(value, 10)
-      if (!Number.isFinite(parsed) || parsed < 1) {
-        throw new Error(`Invalid --workers value: ${value}`)
-      }
-      workers = parsed
-      continue
-    }
-    if (argument === '--retries') {
-      const value = rawArgs[index + 1]
-      if (!value || value.startsWith('--')) {
-        throw new Error('Missing value for --retries')
-      }
-      const parsed = Number.parseInt(value, 10)
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        throw new Error(`Invalid --retries value: ${value}`)
-      }
-      retries = parsed
-      index += 1
-      continue
-    }
-    if (argument.startsWith('--retries=')) {
-      const value = argument.slice('--retries='.length)
-      const parsed = Number.parseInt(value, 10)
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        throw new Error(`Invalid --retries value: ${value}`)
-      }
-      retries = parsed
-      continue
-    }
-    if (argument === '--shard') {
-      const value = rawArgs[index + 1]
-      if (!value || value.startsWith('--')) {
-        throw new Error('Missing value for --shard')
-      }
-      if (!/^\d+\/\d+$/.test(value)) {
-        throw new Error(`Invalid --shard value: ${value}. Expected format: N/M`)
-      }
-      shard = value
-      index += 1
-      continue
-    }
-    if (argument.startsWith('--shard=')) {
-      const value = argument.slice('--shard='.length)
-      if (!/^\d+\/\d+$/.test(value)) {
-        throw new Error(`Invalid --shard value: ${value}. Expected format: N/M`)
-      }
-      shard = value
-      continue
-    }
-    if (argument === '--json') {
-      json = true
-      continue
-    }
-    if (argument === '--keep-raw-v8') {
-      keepRawV8 = true
-      continue
-    }
-    if (argument === '--force-rebuild') {
-      forceRebuild = true
-      continue
-    }
-    if (argument === '--no-reuse-env') {
-      reuseExisting = false
-      continue
-    }
-    throw new Error(`Unknown option: ${argument}`)
-  }
-
-  const defaultCaptureScreenshots = process.env.CI !== 'true'
-  return {
-    filter,
-    captureScreenshots: captureScreenshots ?? defaultCaptureScreenshots,
-    verbose,
-    workers,
-    retries,
-    shard,
-    json,
-    keepRawV8,
-    forceRebuild,
-    reuseExisting,
-  }
-}
-
-function parseIntegrationSpecCoverageOptions(rawArgs: string[]): IntegrationSpecCoverageOptions {
-  let json = false
-  let strict = false
-  for (const argument of rawArgs) {
-    if (argument === '--json') {
-      json = true
-      continue
-    }
-    if (argument === '--strict') {
-      strict = true
-      continue
-    }
-    throw new Error(`Unknown option: ${argument}`)
-  }
-  return { json, strict }
-}
-
-function normalizePath(filePath: string): string {
-  return filePath.split(path.sep).join('/')
-}
-
-async function discoverIntegrationSpecFiles(): Promise<DiscoveredIntegrationSpecFile[]> {
-  return discoverIntegrationSpecFilesShared(projectRootDirectory, LEGACY_INTEGRATION_TEST_ROOT)
-}
-
-async function extractSpecDescription(relativePath: string): Promise<string> {
-  const absolutePath = path.join(projectRootDirectory, relativePath)
-  try {
-    const source = await readFile(absolutePath, 'utf8')
-    const describeTitleMatch = source.match(/test\.describe\(\s*['"`]([^'"`]+)['"`]/)
-    if (describeTitleMatch?.[1]) {
-      return describeTitleMatch[1].trim()
-    }
-    const testCaseTitleMatch = source.match(/TC-[A-Z]+-\d+\s*:\s*([^\n*]+)/)
-    if (testCaseTitleMatch?.[1]) {
-      return testCaseTitleMatch[1].trim()
-    }
-  } catch {
-    return path.basename(relativePath, '.spec.ts')
-  }
-  return path.basename(relativePath, '.spec.ts')
-}
-
-async function listIntegrationSpecFiles(): Promise<IntegrationSpecTarget[]> {
-  const discoveredSpecs = await discoverIntegrationSpecFiles()
-  const sortedFiles = discoveredSpecs.map((entry) => entry.path)
-  const targets = await Promise.all(
-    sortedFiles.map(async (filePath) => ({
-      path: filePath,
-      description: await extractSpecDescription(filePath),
-    })),
-  )
-  return targets
-}
-
-async function collectFilesByExtension(
-  directoryPath: string,
-  extension: string,
-  rootPath: string,
-): Promise<string[]> {
-  let entries
-  try {
-    entries = await readdir(directoryPath, { withFileTypes: true })
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return []
-    }
-    throw error
-  }
-  const collected: string[] = []
-  for (const entry of entries) {
-    const absolutePath = path.join(directoryPath, entry.name)
-    if (entry.isDirectory()) {
-      const nestedFiles = await collectFilesByExtension(absolutePath, extension, rootPath)
-      collected.push(...nestedFiles)
-      continue
-    }
-    if (!entry.isFile() || !entry.name.endsWith(extension)) {
-      continue
-    }
-    const relativePath = path.relative(rootPath, absolutePath)
-    collected.push(normalizePath(relativePath))
-  }
-  return collected
-}
-
-function extractTestCaseId(value: string): string | null {
-  const match = value.match(/TC-([A-Z]+)-(\d{3})/i)
-  if (!match) {
-    return null
-  }
-  const category = match[1]?.toUpperCase()
-  const sequence = match[2]
-  if (!category || !sequence) {
-    return null
-  }
-  return `TC-${category}-${sequence}`
-}
-
-function findFolderSegmentFromPath(relativePath: string): string {
-  const normalized = normalizePath(relativePath)
-  const marker = `${normalizePath(path.relative(projectRootDirectory, LEGACY_INTEGRATION_TEST_ROOT))}/`
-  const markerIndex = normalized.indexOf(marker)
-  if (markerIndex === -1) {
-    return ''
-  }
-  const trailing = normalized.slice(markerIndex + marker.length)
-  return trailing.split('/')[0] ?? ''
-}
-
-function extractCategoryCodeFromCaseId(caseId: string): string | null {
-  const match = caseId.match(/^TC-([A-Z]+)-\d{3}$/)
-  return match?.[1] ?? null
-}
-
-function computePercent(numerator: number, denominator: number): number {
-  if (denominator <= 0) {
-    return 100
-  }
-  return Math.round((numerator / denominator) * 10000) / 100
-}
-
-function formatPercent(value: number | null): string {
-  if (value === null) {
-    return 'n/a'
-  }
-  return `${value.toFixed(2)}%`
-}
-
-export async function runIntegrationSpecCoverageReport(rawArgs: string[]): Promise<void> {
-  const options = parseIntegrationSpecCoverageOptions(rawArgs)
-  const scenarioRoot = path.join(projectRootDirectory, '.ai', 'qa', 'scenarios')
-  const testFiles = (await discoverIntegrationSpecFiles()).map((entry) => entry.path)
-  const scenarioFiles = await collectFilesByExtension(scenarioRoot, '.md', projectRootDirectory)
-  const testRunSummary = await readIntegrationTestRunSummary()
-
-  const testCaseIds = new Set<string>()
-  const scenarioCaseIds = new Set<string>()
-  const testsByFolder = new Map<string, number>()
-
-  for (const testFile of testFiles) {
-    const caseId = extractTestCaseId(path.basename(testFile))
-    const categoryCode = caseId ? extractCategoryCodeFromCaseId(caseId) : null
-    if (caseId) {
-      testCaseIds.add(caseId)
-    }
-    const folder = categoryCode
-      ? Object.entries(FOLDER_TO_CATEGORY_CODE).find(([, mappedCategoryCode]) => mappedCategoryCode === categoryCode)?.[0]
-      : findFolderSegmentFromPath(testFile)
-    if (folder) {
-      testsByFolder.set(folder, (testsByFolder.get(folder) ?? 0) + 1)
-    }
-  }
-
-  for (const scenarioFile of scenarioFiles) {
-    const caseId = extractTestCaseId(path.basename(scenarioFile))
-    if (caseId) {
-      scenarioCaseIds.add(caseId)
-    }
-  }
-
-  const coveredScenarioIds = Array.from(scenarioCaseIds).filter((id) => testCaseIds.has(id))
-  const uncoveredScenarioIds = Array.from(scenarioCaseIds)
-    .filter((id) => !testCaseIds.has(id))
-    .sort((left, right) => left.localeCompare(right))
-  const testsWithoutScenarioIds = Array.from(testCaseIds)
-    .filter((id) => !scenarioCaseIds.has(id))
-    .sort((left, right) => left.localeCompare(right))
-
-  const categories = new Set<string>()
-  for (const scenarioId of scenarioCaseIds) {
-    const category = extractCategoryCodeFromCaseId(scenarioId)
-    if (category) {
-      categories.add(category)
-    }
-  }
-  for (const testId of testCaseIds) {
-    const category = extractCategoryCodeFromCaseId(testId)
-    if (category) {
-      categories.add(category)
-    }
-  }
-
-  const categoryRows = Array.from(categories)
-    .sort((left, right) => left.localeCompare(right))
-    .map((categoryCode) => {
-      const scenarioCount = Array.from(scenarioCaseIds).filter((id) => id.startsWith(`TC-${categoryCode}-`)).length
-      const coveredScenarioCount = coveredScenarioIds.filter((id) => id.startsWith(`TC-${categoryCode}-`)).length
-      const testCount = Array.from(testCaseIds).filter((id) => id.startsWith(`TC-${categoryCode}-`)).length
-      const coveragePercent = scenarioCount > 0 ? computePercent(coveredScenarioCount, scenarioCount) : null
-      return {
-        code: categoryCode,
-        scenarioCount,
-        coveredScenarioCount,
-        testCount,
-        coveragePercent,
-      }
-    })
-
-  const presentRequiredFolders = EXPECTED_TEST_FOLDERS.filter((folder) => (testsByFolder.get(folder) ?? 0) > 0)
-  const missingRequiredFolders = EXPECTED_TEST_FOLDERS.filter((folder) => (testsByFolder.get(folder) ?? 0) === 0)
-  const coveragePercent = computePercent(coveredScenarioIds.length, scenarioCaseIds.size)
-
-  const report: IntegrationCoverageReport = {
-    generatedAt: new Date().toISOString(),
-    testRun: testRunSummary,
-    scenarios: {
-      total: scenarioCaseIds.size,
-      covered: coveredScenarioIds.length,
-      uncovered: uncoveredScenarioIds.length,
-      coveragePercent,
-    },
-    tests: {
-      total: testCaseIds.size,
-      withScenario: testCaseIds.size - testsWithoutScenarioIds.length,
-      withoutScenario: testsWithoutScenarioIds.length,
-    },
-    categories: categoryRows,
-    requiredTestFolders: {
-      present: presentRequiredFolders,
-      missing: missingRequiredFolders,
-    },
-    uncoveredScenarioIds,
-    testsWithoutScenarioIds,
-  }
-
-  if (options.json) {
-    console.log(JSON.stringify(report, null, 2))
-  } else {
-    console.log('[coverage] Integration test coverage report')
-    console.log(`[coverage] Generated at: ${report.generatedAt}`)
-    logIntegrationTestRunSummary(report.testRun)
-    console.log(
-      `[coverage] Scenario coverage: ${report.scenarios.covered}/${report.scenarios.total} (${formatPercent(report.scenarios.coveragePercent)})`,
-    )
-    console.log(`[coverage] Tests discovered: ${report.tests.total}`)
-    console.log(`[coverage] Tests linked to scenarios: ${report.tests.withScenario}`)
-    console.log(`[coverage] Tests without scenarios: ${report.tests.withoutScenario}`)
-    console.log(
-      `[coverage] Required folders with tests: ${report.requiredTestFolders.present.length}/${EXPECTED_TEST_FOLDERS.length} (${report.requiredTestFolders.present.join(', ') || '-'})`,
-    )
-    if (report.requiredTestFolders.missing.length > 0) {
-      console.log(`[coverage] Missing required folders: ${report.requiredTestFolders.missing.join(', ')}`)
-    }
-    console.log('[coverage] Category breakdown:')
-    for (const category of report.categories) {
-      const folder = Object.entries(FOLDER_TO_CATEGORY_CODE).find(([, code]) => code === category.code)?.[0]
-      const folderLabel = folder ? ` (${folder})` : ''
-      console.log(
-        `  - ${category.code}${folderLabel}: scenarios ${category.coveredScenarioCount}/${category.scenarioCount}, tests ${category.testCount}, coverage ${formatPercent(category.coveragePercent)}`,
-      )
-    }
-    if (report.uncoveredScenarioIds.length > 0) {
-      console.log('[coverage] Missing test implementations for scenarios:')
-      for (const scenarioId of report.uncoveredScenarioIds) {
-        console.log(`  - ${scenarioId}`)
-      }
-    }
-    if (report.testsWithoutScenarioIds.length > 0) {
-      console.log('[coverage] Tests without matching scenario files:')
-      for (const testId of report.testsWithoutScenarioIds) {
-        console.log(`  - ${testId}`)
-      }
-    }
-    logIntegrationTestRunOneLineSummary(report.testRun)
-  }
-
-  if (options.strict && (report.uncoveredScenarioIds.length > 0 || report.requiredTestFolders.missing.length > 0)) {
-    throw new Error(
-      `Coverage check failed in strict mode: uncovered scenarios=${report.uncoveredScenarioIds.length}, missing required folders=${report.requiredTestFolders.missing.length}`,
-    )
-  }
-}
-
-async function resetDirectory(directoryPath: string): Promise<void> {
-  await rm(directoryPath, { recursive: true, force: true })
-  await mkdir(directoryPath, { recursive: true })
-}
-
-function getCoveragePaths(): { rawDirectory: string; reportDirectory: string } {
-  const rawDirectory = path.join(projectRootDirectory, '.ai', 'qa', 'test-results', 'coverage', 'raw-v8')
-  const reportDirectory = path.join(projectRootDirectory, '.ai', 'qa', 'test-results', 'coverage', 'code')
-  return { rawDirectory, reportDirectory }
-}
-
-async function generateC8CoverageReport(environment: NodeJS.ProcessEnv, rawDirectory: string, reportDirectory: string): Promise<void> {
-  const c8Args = [
-    'c8',
-    'report',
-    '--temp-directory',
-    rawDirectory,
-    '--report-dir',
-    reportDirectory,
-    '--reporter',
-    'text-summary',
-    '--reporter',
-    'json-summary',
-    '--reporter',
-    'lcov',
-    '--reporter',
-    'html',
-    '--exclude-after-remap',
-    '--exclude',
-    '**/node_modules/**',
-    '--exclude',
-    '**/*.spec.ts',
-    '--exclude',
-    '.ai/**',
-    '--exclude',
-    'apps/docs/**',
-    '--exclude',
-    'packages/cli/**',
-    '--exclude',
-    'coverage/**',
-  ]
-  await runNpxCommand(c8Args, environment)
-}
-
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function readOptionalNumber(record: Record<string, unknown>, key: string): number | null {
-  const value = record[key]
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return null
-  }
-  return value
-}
-
-function readOptionalString(record: Record<string, unknown>, key: string): string | null {
-  const value = record[key]
-  return typeof value === 'string' ? value : null
-}
-
-async function readIntegrationTestRunSummary(): Promise<IntegrationTestRunSummary | null> {
-  let resultsRaw: string
-  try {
-    resultsRaw = await readFile(PLAYWRIGHT_RESULTS_JSON_PATH, 'utf8')
-  } catch {
-    return null
-  }
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(resultsRaw)
-  } catch {
-    return null
-  }
-
-  if (!isObjectRecord(parsed)) {
-    return null
-  }
-  const statsValue = parsed.stats
-  if (!isObjectRecord(statsValue)) {
-    return null
-  }
-
-  const passed = readOptionalNumber(statsValue, 'expected') ?? 0
-  const failed = readOptionalNumber(statsValue, 'unexpected') ?? 0
-  const flaky = readOptionalNumber(statsValue, 'flaky') ?? 0
-  const skipped = readOptionalNumber(statsValue, 'skipped') ?? 0
-
-  return {
-    status: failed > 0 ? 'failed' : 'passed',
-    total: passed + failed + flaky + skipped,
-    passed,
-    failed,
-    flaky,
-    skipped,
-    durationMs: readOptionalNumber(statsValue, 'duration'),
-    startTime: readOptionalString(statsValue, 'startTime'),
-  }
-}
-
-function logIntegrationTestRunSummary(summary: IntegrationTestRunSummary | null): void {
-  if (!summary) {
-    console.log('[coverage] Integration test results: unavailable (.ai/qa/test-results/results.json missing or invalid)')
-    return
-  }
-  console.log('[coverage] Integration test results:')
-  console.log(`  status: ${summary.status}`)
-  console.log(`  passed: ${summary.passed}`)
-  console.log(`  failed: ${summary.failed}`)
-  console.log(`  flaky: ${summary.flaky}`)
-  console.log(`  skipped: ${summary.skipped}`)
-  console.log(`  total: ${summary.total}`)
-}
-
-function logIntegrationTestRunOneLineSummary(summary: IntegrationTestRunSummary | null): void {
-  if (!summary) {
-    return
-  }
-  console.log(
-    `[coverage] Test run summary: passed=${summary.passed}, failed=${summary.failed}, flaky=${summary.flaky}, skipped=${summary.skipped}, total=${summary.total}`,
-  )
-}
-
-export async function runIntegrationCoverageReport(rawArgs: string[]): Promise<void> {
-  const options = parseIntegrationCoverageOptions(rawArgs)
-  const coveragePaths = getCoveragePaths()
-  await resetDirectory(coveragePaths.rawDirectory)
-  await resetDirectory(coveragePaths.reportDirectory)
-
-  const startOptions: EphemeralRuntimeOptions = {
-    verbose: options.verbose,
-    captureScreenshots: options.captureScreenshots,
-    forceRebuild: options.forceRebuild,
-    reuseExisting: options.reuseExisting,
-    logPrefix: 'coverage',
-    environmentOverrides: {
-      NODE_V8_COVERAGE: coveragePaths.rawDirectory,
-    },
-  }
-
-  let testRunError: Error | null = null
-  const runCoverageAttempt = async (environment: EphemeralEnvironmentHandle): Promise<Error | null> => {
-    console.log('[coverage] Running Playwright integration suite with V8 coverage enabled...')
-    console.log('[coverage] Ensuring Playwright Chromium is installed...')
-    await runNpxCommand(['playwright', 'install', 'chromium'], environment.commandEnvironment)
-    try {
-      await runPlaywrightSelection(
-        environment,
-        options.filter,
-        {
-          verbose: options.verbose,
-          captureScreenshots: options.captureScreenshots,
-          workers: options.workers,
-          retries: options.retries,
-          shard: options.shard,
-        },
-      )
-      return null
-    } catch (error) {
-      const coverageRunError = error instanceof Error ? error : new Error(String(error))
-      if (isEnvironmentUnavailableError(coverageRunError)) {
-        console.error('[coverage] Playwright output indicates connection loss to the ephemeral app during coverage run.')
-      }
-      console.error(`[coverage] Playwright run failed: ${coverageRunError.message}`)
-      console.error('[coverage] Continuing to generate coverage report from collected V8 data...')
-      return coverageRunError
-    }
-  }
-
-  let environment = await startEphemeralEnvironment(startOptions)
-  try {
-    testRunError = await runCoverageAttempt(environment)
-    if (testRunError && isEnvironmentUnavailableError(testRunError)) {
-      console.log('[coverage] Rebuilding ephemeral environment and retrying coverage run once...')
-      await environment.stop()
-      environment = await startEphemeralEnvironment(startOptions)
-      testRunError = await runCoverageAttempt(environment)
-    }
-  } finally {
-    await environment.stop()
-  }
-
-  console.log('[coverage] Generating code coverage report...')
-  let coverageReportError: Error | null = null
-  try {
-    await generateC8CoverageReport(environment.commandEnvironment, coveragePaths.rawDirectory, coveragePaths.reportDirectory)
-  } catch (error) {
-    coverageReportError = error instanceof Error ? error : new Error(String(error))
-  }
-
-  if (coverageReportError) {
-    if (!options.keepRawV8) {
-      await rm(coveragePaths.rawDirectory, { recursive: true, force: true })
-    }
-    throw coverageReportError
-  }
-
-  const summaryPath = path.join(coveragePaths.reportDirectory, 'coverage-summary.json')
-  const summaryRaw = await readFile(summaryPath, 'utf8')
-  const summary = JSON.parse(summaryRaw) as {
-    total?: {
-      lines?: { total?: number; covered?: number; pct?: number }
-      statements?: { total?: number; covered?: number; pct?: number }
-      functions?: { total?: number; covered?: number; pct?: number }
-      branches?: { total?: number; covered?: number; pct?: number }
-    }
-  }
-  const totals = summary.total ?? {}
-  const testRunSummary = await readIntegrationTestRunSummary()
-  const output = {
-    generatedAt: new Date().toISOString(),
-    reportDirectory: normalizePath(path.relative(projectRootDirectory, coveragePaths.reportDirectory)),
-    rawCoverageDirectory: normalizePath(path.relative(projectRootDirectory, coveragePaths.rawDirectory)),
-    testRun: testRunSummary,
-    totals: {
-      lines: totals.lines ?? null,
-      statements: totals.statements ?? null,
-      functions: totals.functions ?? null,
-      branches: totals.branches ?? null,
-    },
-  }
-
-  const linePct = output.totals.lines?.pct ?? 0
-  const statementPct = output.totals.statements?.pct ?? 0
-  const functionPct = output.totals.functions?.pct ?? 0
-  const branchPct = output.totals.branches?.pct ?? 0
-  const lineCovered = output.totals.lines?.covered ?? 0
-  const lineTotal = output.totals.lines?.total ?? 0
-  const statementCovered = output.totals.statements?.covered ?? 0
-  const statementTotal = output.totals.statements?.total ?? 0
-  const functionCovered = output.totals.functions?.covered ?? 0
-  const functionTotal = output.totals.functions?.total ?? 0
-  const branchCovered = output.totals.branches?.covered ?? 0
-  const branchTotal = output.totals.branches?.total ?? 0
-
-  if (!options.keepRawV8) {
-    await rm(coveragePaths.rawDirectory, { recursive: true, force: true })
-  }
-
-  console.log('[coverage] Coverage totals:')
-  console.log(`  lines: ${lineCovered}/${lineTotal} (${linePct}%)`)
-  console.log(`  statements: ${statementCovered}/${statementTotal} (${statementPct}%)`)
-  console.log(`  functions: ${functionCovered}/${functionTotal} (${functionPct}%)`)
-  console.log(`  branches: ${branchCovered}/${branchTotal} (${branchPct}%)`)
-  logIntegrationTestRunSummary(output.testRun)
-  console.log(`[coverage] HTML report: ${output.reportDirectory}/index.html`)
-
-  if (options.json) {
-    console.log(JSON.stringify(output, null, 2))
-    if (testRunError) {
-      throw testRunError
-    }
-    return
-  }
-
-  console.log(`[coverage] Code coverage summary: lines=${linePct}%, statements=${statementPct}%, functions=${functionPct}%, branches=${branchPct}%`)
-  logIntegrationTestRunOneLineSummary(output.testRun)
-  console.log('[coverage] Use --json for machine-readable output or --keep-raw-v8 to keep raw process coverage files.')
-
-  if (testRunError) {
-    throw testRunError
-  }
-}
-
-async function runPlaywrightSelection(
-  environment: EphemeralEnvironmentHandle,
-  selection: string | string[] | null,
-  options: PlaywrightRunOptions,
-): Promise<void> {
-  const args = ['playwright', 'test', '--config', PLAYWRIGHT_INTEGRATION_CONFIG_PATH]
-  if (options.workers !== null) {
-    args.push('--workers', String(options.workers))
-  }
-  if (options.retries !== null) {
-    args.push('--retries', String(options.retries))
-  }
-  if (options.shard) {
-    args.push('--shard', options.shard)
-  }
-  if (Array.isArray(selection) && selection.length > 0) {
-    args.push(...selection)
-  } else if (typeof selection === 'string' && selection.length > 0) {
-    args.push(selection)
-  }
-  await runNpxCommandWithOutputMonitoring(args, environment.commandEnvironment, {
-    detectEnvironmentUnavailable: true,
-    abortOnEnvironmentUnavailable: true,
-    playwrightFailureHealthCheck: {
-      baseUrl: environment.baseUrl,
-    },
-  })
-}
-
-type IntegrationTestRunResult = {
-  retried: boolean
-  error: Error | null
-}
-
-async function runIntegrationTestSuiteOnce(
-  environment: EphemeralEnvironmentHandle,
-  options: IntegrationOptions,
-): Promise<void> {
-  const testArgs = ['test:integration']
-  if (options.filter) {
-    testArgs.push(options.filter)
-  }
-  await runYarnCommandWithOutputMonitoring(testArgs, environment.commandEnvironment, {
-    detectEnvironmentUnavailable: true,
-    abortOnEnvironmentUnavailable: true,
-    playwrightFailureHealthCheck: {
-      baseUrl: environment.baseUrl,
-    },
-  })
 }
 
 async function isEnvironmentUnavailable(baseUrl: string): Promise<boolean> {
   const readiness = await probeApplicationReadiness(baseUrl)
   return !readiness.ready
-}
-
-function isEnvironmentUnavailableError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false
-  }
-  return (error as IntegrationCommandError).environmentUnavailableFromOutput === true
-}
-
-function normalizeError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error))
-}
-
-async function runIntegrationTestAttempt(
-  environment: EphemeralEnvironmentHandle,
-  integrationOptions: IntegrationOptions,
-  prepareTestEnvironment: (environment: EphemeralEnvironmentHandle) => Promise<void>,
-): Promise<Error | null> {
-  try {
-    await prepareTestEnvironment(environment)
-    await runIntegrationTestSuiteOnce(environment, integrationOptions)
-    return null
-  } catch (error) {
-    return normalizeError(error)
-  }
-}
-
-async function detectEnvironmentFailure(
-  error: Error,
-  baseUrl: string,
-): Promise<{ unavailable: boolean; fromOutput: boolean }> {
-  const fromOutput = isEnvironmentUnavailableError(error)
-  if (fromOutput) {
-    return { unavailable: true, fromOutput: true }
-  }
-  return {
-    unavailable: await isEnvironmentUnavailable(baseUrl),
-    fromOutput: false,
-  }
-}
-
-async function runIntegrationTestSuiteWithRecovery(
-  startOptions: Pick<EphemeralRuntimeOptions, 'verbose' | 'captureScreenshots' | 'forceRebuild' | 'reuseExisting'>,
-  integrationOptions: IntegrationOptions,
-  prepareTestEnvironment: (environment: EphemeralEnvironmentHandle) => Promise<void>,
-): Promise<{
-  environment: EphemeralEnvironmentHandle
-  testRunResult: IntegrationTestRunResult
-}> {
-  let environment = await startEphemeralEnvironment({
-    ...startOptions,
-    logPrefix: 'integration',
-  })
-
-  const firstAttemptError = await runIntegrationTestAttempt(environment, integrationOptions, prepareTestEnvironment)
-  if (!firstAttemptError) {
-    return { environment, testRunResult: { retried: false, error: null } }
-  }
-
-  const failure = await detectEnvironmentFailure(firstAttemptError, environment.baseUrl)
-  if (!failure.unavailable) {
-    return { environment, testRunResult: { retried: false, error: firstAttemptError } }
-  }
-
-  if (failure.fromOutput) {
-    console.error('[integration] Playwright output indicates connection loss to the app. Restarting environment.')
-  }
-  console.error('[integration] The ephemeral integration environment became unreachable while tests were running.')
-  console.error('[integration] Rebuilding ephemeral environment and rerunning tests.')
-
-  try {
-    await environment.stop()
-  } catch (stopError) {
-    console.error(`[integration] Failed to stop old ephemeral environment before restart: ${normalizeError(stopError).message}`)
-  }
-
-  environment = await startEphemeralEnvironment({
-    ...startOptions,
-    logPrefix: 'integration',
-  })
-  const retryError = await runIntegrationTestAttempt(environment, integrationOptions, prepareTestEnvironment)
-  return {
-    environment,
-    testRunResult: {
-      retried: true,
-      error: retryError,
-    },
-  }
-}
-
-async function openIntegrationHtmlReport(environment: EphemeralEnvironmentHandle): Promise<void> {
-  await runNpxCommand(['playwright', 'show-report', '.ai/qa/test-results/html'], environment.commandEnvironment)
-}
-
-async function promptAfterRun(
-  rl: Interface,
-  environment: EphemeralEnvironmentHandle,
-): Promise<'menu' | 'quit'> {
-  const followUpChoice = (
-    await rl.question(
-      '\n[interactive] 🔁 Press any key then Enter to return to menu, 📊 "h" for HTML report, or 🚪 "q" to quit: ',
-    )
-  )
-    .trim()
-    .toLowerCase()
-
-  if (followUpChoice === 'h') {
-    console.log('[interactive] 📊 Opening HTML report...')
-    try {
-      await openIntegrationHtmlReport(environment)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      console.error(`[interactive] ❌ Failed to open report: ${message}`)
-    }
-    return 'menu'
-  }
-
-  if (followUpChoice === 'q') {
-    return 'quit'
-  }
-
-  return 'menu'
 }
 
 export async function startEphemeralEnvironment(options: EphemeralRuntimeOptions): Promise<EphemeralEnvironmentHandle> {
@@ -3595,14 +2158,14 @@ export async function startEphemeralEnvironment(options: EphemeralRuntimeOptions
       // → sendMessage chain end-to-end without a real FCM/APNs/Expo provider. The
       // adapter is production-safe (registered only under this flag) and inert unless
       // a delivery row carries `provider='push_stub'` — i.e. a test seeded a matching
-      // push channel + device. Applies to the app server, the Playwright process, and
+      // push channel + device. Applies to the app server, the test process, and
       // any drain/worker child that inherits this environment.
       OM_ENABLE_PUSH_STUB_ADAPTER: process.env.OM_ENABLE_PUSH_STUB_ADAPTER ?? '1',
       // Swap the FCM/APNs/Expo SDK clients for network-free fakes (TC-CHANNEL-PUSH-005+) so the REAL
       // provider adapters — native message construction, credential parsing, client caching, and every
       // error → `device_unregistered` mapping — run end-to-end without live keys. Unlike
       // `push_stub`, which replaces the whole adapter, this replaces only each SDK client, and is
-      // registered only under this flag. Applies to the app server, the Playwright process, and any
+      // registered only under this flag. Applies to the app server, the test process, and any
       // drain/worker child that inherits this environment.
       OM_PUSH_FAKE_PROVIDERS: process.env.OM_PUSH_FAKE_PROVIDERS ?? '1',
       // Expo's receipt reaper ignores rows younger than 15 minutes by default (it polls a real
@@ -3616,7 +2179,7 @@ export async function startEphemeralEnvironment(options: EphemeralRuntimeOptions
       OM_WEBHOOKS_ALLOW_PRIVATE_URLS: process.env.OM_WEBHOOKS_ALLOW_PRIVATE_URLS ?? '1',
       // Read at build time as well as at runtime, so this block has to carry it:
       // the app build and `yarn start` both run with this environment. See the
-      // matching note on the Playwright-process env block above.
+      // matching note on the test-process env block above.
       SELF_SERVICE_ONBOARDING_ENABLED: process.env.SELF_SERVICE_ONBOARDING_ENABLED ?? 'true',
       ENABLE_CRUD_API_CACHE: 'true',
       MOCK_GATEWAY_WEBHOOK_SECRET: 'open-mercato-mock-dev-webhook-secret',
@@ -3625,7 +2188,7 @@ export async function startEphemeralEnvironment(options: EphemeralRuntimeOptions
       // NODE_ENV=production; without this the app 400s every mock_inbound
       // verification and the TC-WEBHOOK suite fails locally (CI exports the
       // var at the workflow level, masking the gap). Keep in sync with the
-      // Playwright-process env block above.
+      // test-process env block above.
       MOCK_INBOUND_WEBHOOK_SECRET: 'open-mercato-mock-dev-inbound-webhook-secret',
       NEXT_PUBLIC_UMES_DEVTOOLS: 'true',
       CI: 'true',
@@ -3665,8 +2228,6 @@ export async function startEphemeralEnvironment(options: EphemeralRuntimeOptions
         process.env[PRIVATE_ATTACHMENTS_PARTITION_ENV_KEY] ?? EPHEMERAL_PRIVATE_ATTACHMENTS_ROOT,
       NODE_NO_WARNINGS: '1',
       PORT: String(applicationPort),
-      PW_CAPTURE_SCREENSHOTS: options.captureScreenshots ? '1' : '0',
-      ...(options.environmentOverrides ?? {}),
     })
 
     const runtimeLock = await acquireEphemeralRuntimeLock(options.logPrefix)
@@ -3815,7 +2376,6 @@ export async function startEphemeralEnvironment(options: EphemeralRuntimeOptions
         databaseUrl,
         queueBaseDir: EPHEMERAL_QUEUE_BASE_DIR,
         logPrefix: options.logPrefix,
-        captureScreenshots: options.captureScreenshots,
       })
       return {
         baseUrl: applicationBaseUrl,
@@ -3834,81 +2394,25 @@ export async function startEphemeralEnvironment(options: EphemeralRuntimeOptions
   }
 }
 
-// Interrupt handling belongs to `startEphemeralEnvironment`, which owns the detached tree and now
-// registers SIGINT/SIGTERM handlers for every run — not just the `--keep` ones. Registering a
-// second pair here would race them: both fire on the same signal, and this one's `process.exit()`
-// would cut the environment's teardown short mid-await.
+// Interrupt handling belongs to `startEphemeralEnvironment`, which owns the detached tree and
+// registers SIGINT/SIGTERM handlers for every run. Registering a second pair here would race them:
+// both fire on the same signal, and this one's `process.exit()` would cut the environment's
+// teardown short mid-await.
 async function keepEnvironmentRunningForever(): Promise<void> {
   await new Promise<void>(() => {})
-}
-
-export async function runIntegrationTestsInEphemeralEnvironment(rawArgs: string[]): Promise<void> {
-  const options = parseOptions(rawArgs)
-  const startOptions: Pick<EphemeralRuntimeOptions, 'verbose' | 'captureScreenshots' | 'forceRebuild' | 'reuseExisting'> = {
-    verbose: options.verbose,
-    captureScreenshots: options.captureScreenshots,
-    forceRebuild: options.forceRebuild,
-    reuseExisting: options.reuseExisting,
-  }
-  let environment: EphemeralEnvironmentHandle | null = null
-  let testRunResult: IntegrationTestRunResult
-
-  try {
-    console.log('[integration] Running Playwright suite...')
-    if (options.reuseExisting) {
-      console.log('[integration] Checking whether an existing ephemeral environment can be reused...')
-    } else {
-      console.log('[integration] --no-reuse-env enabled: always booting a fresh ephemeral environment.')
-    }
-    const environmentState = await runIntegrationTestSuiteWithRecovery(
-      startOptions,
-      options,
-      async (runtimeEnvironment) => {
-        console.log('[integration] Ensuring Playwright Chromium is installed...')
-        await runNpxCommand(['playwright', 'install', 'chromium'], runtimeEnvironment.commandEnvironment)
-      },
-    )
-    environment = environmentState.environment
-    testRunResult = environmentState.testRunResult
-
-    if (!environment.ownedByCurrentProcess) {
-      console.log('[integration] Attached to an already running ephemeral environment from .ai/qa/ephemeral-env.json.')
-    }
-    if (testRunResult.retried) {
-      console.log('[integration] Retried integration tests after restarting ephemeral environment.')
-    }
-    const effectiveCaptureScreenshots = environment.commandEnvironment.PW_CAPTURE_SCREENSHOTS === '1'
-    console.log(
-      `[integration] Screenshot capture is ${effectiveCaptureScreenshots ? 'enabled' : 'disabled'} (override with --screenshots / --no-screenshots)`,
-    )
-
-    if (testRunResult.error) {
-      throw testRunResult.error
-    }
-
-    if (options.keep) {
-      console.log('[integration] --keep enabled: leaving app and database running. Press Ctrl+C to stop.')
-      await keepEnvironmentRunningForever()
-    }
-  } finally {
-    if (!options.keep) {
-      await environment?.stop()
-    }
-  }
 }
 
 export async function runEphemeralAppForQa(rawArgs: string[]): Promise<void> {
   const options = parseEphemeralAppOptions(rawArgs)
   const environment = await startEphemeralEnvironment({
     verbose: options.verbose,
-    captureScreenshots: options.captureScreenshots,
     forceRebuild: options.forceRebuild,
     reuseExisting: options.reuseExisting,
     logPrefix: 'ephemeral',
   })
 
   console.log(`[ephemeral] Ready for QA exploration at ${environment.baseUrl}`)
-  console.log('[ephemeral] Use Playwright MCP against this URL to avoid interference with other local instances.')
+  console.log('[ephemeral] Point the e2e suite (e2e/) or any browser at this URL to avoid interference with other local instances.')
   console.log('[ephemeral] Default credentials: admin@acme.com / secret')
   if (environment.ownedByCurrentProcess) {
     console.log('[ephemeral] Press Ctrl+C to stop.')
@@ -3917,161 +2421,4 @@ export async function runEphemeralAppForQa(rawArgs: string[]): Promise<void> {
   }
 
   await keepEnvironmentRunningForever()
-}
-
-export async function runInteractiveIntegrationInEphemeralEnvironment(rawArgs: string[]): Promise<void> {
-  const options = parseInteractiveIntegrationOptions(rawArgs)
-  const environment = await startEphemeralEnvironment({
-    verbose: options.verbose,
-    captureScreenshots: options.captureScreenshots,
-    forceRebuild: options.forceRebuild,
-    reuseExisting: options.reuseExisting,
-    logPrefix: 'interactive',
-  })
-
-  const rl = createInterface({ input, output })
-  let specFiles = await listIntegrationSpecFiles()
-  let activeFilter = ''
-
-  console.log('[interactive] 🎯 Integration menu ready.')
-  if (!environment.ownedByCurrentProcess) {
-    console.log('[interactive] 🔁 Reusing existing environment from .ai/qa/ephemeral-env.json.')
-  }
-  console.log(`[interactive] 🌐 Running against ${environment.baseUrl}`)
-  console.log('[interactive] ⌨️ Enter a number to run, type text (for example "crm") to filter, "a" to clear filter, "r" to refresh, "h" for HTML report, "q" to quit.')
-
-  try {
-    while (true) {
-      const normalizedFilter = activeFilter.trim().toLowerCase()
-      const visibleTargets = normalizedFilter.length === 0
-        ? specFiles
-        : specFiles.filter((target) => {
-            const haystack = `${target.path} ${target.description}`.toLowerCase()
-            return haystack.includes(normalizedFilter)
-          })
-
-      console.log('\n[interactive] 📚 Available targets:')
-      if (normalizedFilter.length > 0) {
-        console.log(`  🔎 Filter: "${activeFilter}" (${visibleTargets.length}/${specFiles.length})`)
-      }
-      if (normalizedFilter.length > 0) {
-        console.log(`  0) Run all filtered tests (${visibleTargets.length})`)
-      } else {
-        console.log('  0) Run all tests')
-      }
-      visibleTargets.forEach((target, index) => {
-        console.log(`  ${index + 1}) ${target.path} - ${target.description}`)
-      })
-      console.log('  h) Open HTML report')
-      console.log('  a) Clear filter')
-      console.log('  r) Refresh test list')
-      console.log('  q) Quit')
-
-      const rawChoice = (await rl.question('\n[interactive] 👉 Select option: ')).trim()
-      if (!rawChoice) {
-        continue
-      }
-
-      const normalizedChoice = rawChoice.toLowerCase()
-      if (normalizedChoice === 'q') {
-        break
-      }
-      if (normalizedChoice === 'r') {
-        specFiles = await listIntegrationSpecFiles()
-        if (activeFilter.trim().length > 0) {
-          console.log(`[interactive] 🔄 Refreshed test list (${specFiles.length} files), keeping filter "${activeFilter}".`)
-        } else {
-          console.log(`[interactive] 🔄 Refreshed test list (${specFiles.length} files).`)
-        }
-        continue
-      }
-      if (normalizedChoice === 'a') {
-        activeFilter = ''
-        console.log('[interactive] 🧹 Filter cleared.')
-        console.log(`[interactive] 🔄 Refreshed test list (${specFiles.length} files).`)
-        continue
-      }
-      if (normalizedChoice === 'h') {
-        console.log('[interactive] 📊 Opening HTML report...')
-        try {
-          await openIntegrationHtmlReport(environment)
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          console.error(`[interactive] ❌ Failed to open report: ${message}`)
-        }
-        continue
-      }
-
-      const parsedIndex = Number.parseInt(rawChoice, 10)
-      if (!Number.isFinite(parsedIndex) || parsedIndex < 0) {
-        activeFilter = rawChoice
-        const filteredCount = specFiles.filter((target) => {
-          const haystack = `${target.path} ${target.description}`.toLowerCase()
-          return haystack.includes(activeFilter.trim().toLowerCase())
-        }).length
-        if (filteredCount === 0) {
-          console.error(`[interactive] ⚠️ No tests matched filter "${activeFilter}".`)
-        } else {
-          console.log(`[interactive] 🔎 Filtered list to "${activeFilter}" (${filteredCount} matches).`)
-        }
-        continue
-      }
-
-      if (parsedIndex === 0) {
-        if (normalizedFilter.length > 0) {
-          if (visibleTargets.length === 0) {
-            console.error(`[interactive] ⚠️ No tests matched filter "${activeFilter}".`)
-            continue
-          }
-          console.log(
-            `[interactive] 🧪 Running ${visibleTargets.length} filtered test(s) for "${activeFilter}"...`,
-          )
-          try {
-            await runPlaywrightSelection(
-              environment,
-              visibleTargets.map((target) => target.path),
-              options,
-            )
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error)
-            console.error(`[interactive] ❌ Test run failed: ${message}`)
-          }
-        } else {
-          console.log('[interactive] 🧪 Running full integration suite...')
-          try {
-            await runPlaywrightSelection(environment, null, options)
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error)
-            console.error(`[interactive] ❌ Test run failed: ${message}`)
-          }
-        }
-        const nextAction = await promptAfterRun(rl, environment)
-        if (nextAction === 'quit') {
-          break
-        }
-        continue
-      }
-
-      const selectedTarget = visibleTargets[parsedIndex - 1]
-      if (!selectedTarget) {
-        console.error(`[interactive] ⚠️ Selection out of range: ${parsedIndex}`)
-        continue
-      }
-
-      console.log(`[interactive] 🧪 Running ${selectedTarget.path}...`)
-      try {
-        await runPlaywrightSelection(environment, selectedTarget.path, options)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        console.error(`[interactive] ❌ Test run failed: ${message}`)
-      }
-      const nextAction = await promptAfterRun(rl, environment)
-      if (nextAction === 'quit') {
-        break
-      }
-    }
-  } finally {
-    rl.close()
-    await environment.stop()
-  }
 }

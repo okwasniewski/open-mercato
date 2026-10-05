@@ -73,7 +73,7 @@ Before authoring a test file, read `.ai/skills/om-module-scaffold/references/ver
 2. `yarn generate` when discovery is involved.
 3. Focused package/app typecheck or test.
 4. `yarn typecheck`, `yarn lint`, `yarn test`, `yarn build` for broad/contract changes.
-5. `yarn test:integration:ephemeral` or a filtered integration run for affected API/UI paths.
+5. `yarn test:ephemeral:start` and exercise affected API/UI paths against the disposable app.
 6. Packed/Verdaccio standalone validation when package exports or compiled discovery are involved.
 
 Run validation commands so the reported shell status is the validation command's status. Do not pipe gates through `grep`, `tail`, or a trailing `echo`; when log capture requires a pipeline, enable `pipefail` and explicitly preserve the command's exit code. Any nonzero status remains a failed gate.

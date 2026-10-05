@@ -1,64 +1,47 @@
-# QA Integration Testing Instructions
+# QA Instructions
 
 ## Always
 
-- Prefer executable Playwright TypeScript tests in module `__integration__` folders.
-- Reuse shared helpers from `@open-mercato/core/helpers/integration/*`.
-- Keep integration tests independent, data-independent, deterministic, and safe across retries.
-- Create required fixtures per test and clean up created data in `finally`/teardown.
-- Check `.ai/qa/ephemeral-env.json` before starting a new manual exploration environment.
+- Executable browser tests live in `e2e/tests/*.e2e.ts`, an agentic suite on the [e2e](https://e2e.dev) runner. Each test states goals in natural language, an agent drives a real browser, and deterministic checks (URL, API read-back, exact values) pin the outcome.
+- Keep the `TC-...` id from `.ai/qa/scenarios` in the test title; one `describe` per area, tagged (`auth`, `crm`, `catalog`, `sales`, `admin`).
+- Create fixtures and clean up through the `api` fixture (`e2e/tests/support/api.ts`). Everything created or tracked is deleted after the test, pass or fail.
+- Use saved sessions (`{ session: 'admin' }`) instead of logging in; `tests/auth.setup.e2e.ts` signs the personas in once.
+- Build run-unique names from the `stamp` fixture and pass them to `agent.act` as `unique(...)` params.
+- Check `.ai/qa/ephemeral-env.json` before starting a new environment.
 
 ## Ask First
 
 - Ask before applying migrations or resetting a developer's local database.
-- Ask before adding tests that require live external services or secrets instead of using metadata gates.
-- Ask before placing executable specs outside the preferred module `__integration__` locations.
+- Ask before adding tests that need live external services or secrets.
+- Ask before adding a new area file (new tag) under `e2e/tests/`.
 
 ## Never
 
-- Never put executable `.spec.ts` files under `.ai/qa/tests`; that directory is for shared Playwright config.
-- Never rely on seeded/demo data being present.
-- Never leave broken tests; fix them or use `test.skip()` with a clear reason.
-- Never use loose `testIgnore` globs that can match parent workspace paths.
-
-## Validation Commands
-
-```bash
-yarn test:integration
-yarn test:integration:ephemeral
-npx playwright test --config .ai/qa/tests/playwright.config.ts --list
-```
+- Never rely on seeded records beyond the demo accounts and the demo tenant named in `e2e/e2e.config.ts`.
+- Never put a password in a test; use `credentials.user(name).password` or `secrets.get(name)`.
+- Never leave broken tests; fix them or `test.skip` with a reason.
 
 ## Quick Start
 
 ```bash
-# Run all integration tests headlessly (zero token cost, CI-ready)
-yarn test:integration
+# App: ephemeral env (URL in .ai/qa/ephemeral-env.json) or the dev server on :3000
+yarn test:ephemeral:start            # or yarn test:ephemeral:start:verbose, or yarn dev
 
-# Run tests matching a module/category path fragment
-npx playwright test --config .ai/qa/tests/playwright.config.ts sales
+cd e2e
+npm install
+npx @e2e-dev/web install chromium    # once
 
-# Run all tests in ephemeral containers (no dev server needed, Docker required)
-yarn test:integration:ephemeral
-
-# Run tests from an interactive menu in persisted ephemeral environment
-yarn test:integration:ephemeral:interactive
-
-# Start isolated ephemeral app only (for MCP/manual exploration)
-yarn test:integration:ephemeral:start
-
-# View HTML report
-yarn test:integration:report
+APP_URL=http://127.0.0.1:5001 npm test          # whole suite; needs a model key (AI_GATEWAY_API_KEY)
+npm test -- auth.e2e.ts                         # one file
+npm test -- --tag crm                           # one area
+npm run list                                    # what would run
+npm run test:headed                             # watch the browser
+npm run test:live                               # ignore cached agent steps
 ```
 
-Preferred local workflow for short iterations:
-1. Start `yarn test:integration:ephemeral:start`
-2. Reuse the running environment from `.ai/qa/ephemeral-env.json`
-3. Use `/om-integration-tests` against that URL
+Report: `e2e/.e2e/report.json`. Failures leave screenshots and a trace under `e2e/.e2e/artifacts/`. Passing `agent.act` steps are cached under `e2e/.e2e/cache/` and replay without a model call while the screens are unchanged.
 
-Discovery troubleshooting:
-- If Playwright reports `No tests found`, run `npx playwright test --config .ai/qa/tests/playwright.config.ts --list` first.
-- Keep `testIgnore` entries in `.ai/qa/tests/playwright.config.ts` scoped to absolute paths under `projectRoot`; avoid loose relative globs such as `.codex/**` that can match parent workspace paths.
+Preferred local loop: boot once with `yarn test:ephemeral:start`, reuse the URL from `.ai/qa/ephemeral-env.json`, run `/om-integration-tests` against it.
 
 ---
 
@@ -66,373 +49,111 @@ Discovery troubleshooting:
 
 ```
 .ai/qa/
-├── AGENTS.md                    # This file
-├── scenarios/                   # OPTIONAL — markdown test case descriptions
-│   ├── TC-AUTH-001-*.md         #   Human-readable, used as input for test generation
-│   ├── TC-CAT-001-*.md         #   NOT required — tests can be generated directly
-│   └── ...
-├── tests/                       # Playwright config only — do not place specs here
-│   ├── playwright.config.ts
-└── ...
+├── AGENTS.md                # This file
+├── scenarios/               # TC-*.md scenario descriptions (source of the TC ids)
+└── ephemeral-env.json       # CLI-owned state of the running ephemeral app
 
-packages/<package>/src/modules/<module>/__integration__/   # Preferred test location
-apps/mercato/src/modules/<module>/__integration__/         # App-specific modules
-packages/enterprise/modules/<module>/__integration__/      # Optional enterprise overlay tests
+e2e/
+├── e2e.config.ts            # web target at APP_URL, QA agent persona and vocabulary, demo credentials, secrets
+├── tests/auth.setup.e2e.ts  # signs in admin and employee once, saves both sessions
+├── tests/support/api.ts     # REST client for fixtures, read-back, cleanup
+├── tests/support/fixtures.ts# api, apiAs(persona), stamp fixtures; re-exports expect, credentials, secrets, unique
+└── tests/*.e2e.ts           # one file per area: auth, crm, catalog, sales, admin
 ```
+
+See `e2e/README.md` for the full picture and the `om-integration-tests` skill for writing tests.
 
 ---
 
-## Reusable Helpers
+## Scenarios
 
-Use shared helpers from `@open-mercato/core/helpers/integration/*`. These are published in the npm package and available to both monorepo and standalone app developers.
-
-> **Legacy path**: `@open-mercato/core/modules/core/__integration__/helpers/*` still works in the monorepo via re-exports but is NOT available from npm. New code should use the `@open-mercato/core/helpers/integration/*` path.
-
-| Helper Import | Main Exports | Typical Use |
-|------|-------|--------|
-| `@open-mercato/core/helpers/integration/auth` | `login`, `DEFAULT_CREDENTIALS` | UI authentication and role-based login (`admin`, `employee`, `superadmin`) |
-| `@open-mercato/core/helpers/integration/api` | `getAuthToken`, `apiRequest` | Authenticated API setup and raw API calls in integration tests |
-| `@open-mercato/core/helpers/integration/authUi` | `createUserViaUi` | Auth module UI flows for user creation/edit smoke coverage |
-| `@open-mercato/core/helpers/integration/catalogFixtures` | `createProductFixture`, `deleteCatalogProductIfExists` | Catalog fixture lifecycle for setup/cleanup |
-| `@open-mercato/core/helpers/integration/crmFixtures` | `createCompanyFixture`, `createPersonFixture`, `createDealFixture`, `deleteEntityIfExists`, `readJsonSafe` | Customers/CRM fixture creation and cleanup; `readJsonSafe` for parsing Playwright APIResponse body to JSON |
-| `@open-mercato/core/helpers/integration/salesFixtures` | `createSalesQuoteFixture`, `createSalesOrderFixture`, `createOrderLineFixture`, `deleteSalesEntityIfExists` | Sales API fixture lifecycle |
-| `@open-mercato/core/helpers/integration/salesUi` | `createSalesDocument`, `addCustomLine`, `updateLineQuantity`, `deleteLine`, `addAdjustment`, `addPayment`, `addShipment`, `readGrandTotalGross` | Sales document UI interactions and totals assertions |
-| `@open-mercato/core/helpers/integration/queue` | `drainIntegrationQueue` | Drains local queue jobs in the correct app context; standalone runs spawn from `OM_TEST_APP_ROOT` so worker env/package resolution matches the app under test |
-| `@open-mercato/core/helpers/integration/authFixtures` | `createRoleFixture`, `deleteRoleIfExists`, `createUserFixture`, `deleteUserIfExists` | Role and user fixture lifecycle |
-| `@open-mercato/core/helpers/integration/generalFixtures` | `readJsonSafe`, `getTokenContext`, `expectId`, `deleteEntityByPathIfExists` | General-purpose test utilities |
-| `@open-mercato/core/helpers/integration/dictionariesFixtures` | `createDictionaryFixture` | Dictionary fixture creation |
-
-Import pattern from module tests:
-
-```ts
-import { login } from '@open-mercato/core/helpers/integration/auth';
-import { apiRequest, getAuthToken } from '@open-mercato/core/helpers/integration/api';
-```
-
-Queue-backed tests:
-- If a test creates a local queue job and then waits for a result, call `drainIntegrationQueue('<queue-name>')` instead of importing worker handlers or `createRequestContainer` directly in the spec.
-- This is required for standalone parity (`OM_TEST_APP_ROOT`) because the Playwright process is the monorepo, while the job was created by the scaffolded app. The helper runs the drain from the target app root so env, generated files, package versions, and encryption keys match.
-
-> **Barrel import** (subset): `@open-mercato/core/testing/integration` re-exports the most common helpers as a single import for convenience.
-
----
-
-## CrudForm Field-Persistence Sweep (#2466)
-
-Automated follow-up to the manual CrudForm data-persistence QA (umbrella #2466). Every
-CrudForm / detail-edit surface gets a spec proving it **saves and reloads every field type**
-— scalars, dictionary references, multiselect/array values, and **custom fields** — on both
-create and update. Specs land per-module under `__integration__/TC-<MOD>-CRUDFORM-*.spec.ts`.
-
-### Shared harness
-
-`@open-mercato/core/helpers/integration/crudFormPersistence`:
-
-- `skipIfCrudFormExtensionTestsDisabled()` — call in `test.beforeAll`; skips the spec when the
-  sweep is disabled (see flag below).
-- `runCrudFormRoundTrip(config)` — runs create → read-back → assert all fields → update →
-  read-back → assert → delete for a makeCrud collection route. Pass `expectAfterCreate` /
-  `expectAfterUpdate` as `{ scalars?, customFields? }`. Supply `readById` for detail-GET routes.
-- `assertScalarFieldsPersisted(record, expected)` / `assertCustomFieldsPersisted(record, expected)`
-  — for hand-written specs that don't fit the round-trip runner.
-- `getCustomFieldValue(record, name)` — resolves a custom field from any response shape
-  (`customValues` bare keys, top-level `cf_<name>` / `cf:<name>`, or a `customFields[]` array).
-
-Reference spec: `packages/core/src/modules/currencies/__integration__/TC-CUR-CRUDFORM-001.spec.ts`.
-
-### Disable flag
-
-`OM_INTEGRATION_CRUDFORM_EXTENSION_TESTS_DISABLED` (default **false** → the sweep runs). Set
-truthy (`1`/`true`/`yes`/`on`) to skip every CrudForm-persistence spec wholesale without
-deleting them — parsed via `parseBooleanWithDefault` from `@open-mercato/shared/lib/boolean`.
-
-### Re-run the whole sweep
-
-```bash
-# All CrudForm-persistence specs across all modules (against a running app on :3000):
-npx playwright test --config .ai/qa/tests/playwright.config.ts CRUDFORM
-# One module only:
-OM_INTEGRATION_MODULES=currencies npx playwright test --config .ai/qa/tests/playwright.config.ts CRUDFORM
-# Disable the sweep (e.g. on a constrained CI lane):
-OM_INTEGRATION_CRUDFORM_EXTENSION_TESTS_DISABLED=1 yarn test:integration
-```
-
-The pure harness logic (env-gate + custom-field resolution) is unit-tested under jest at
-`packages/core/src/helpers/integration/__tests__/crudFormFields.test.ts` (runs in `yarn test`).
-
----
-
-## Scenarios Are Optional
-
-Markdown test scenarios (`.ai/qa/scenarios/TC-*.md`) are **optional reference material**. Tests can be generated through any of these paths:
-
-| Path | Input | Output |
-|------|-------|--------|
-| **From spec** | `.ai/specs/*.md` or `.ai/specs/enterprise/*.md` | `.spec.ts` directly (no scenario needed) |
-| **From scenario** | `.ai/qa/scenarios/TC-*.md` | `.spec.ts` mapped from scenario steps |
-| **From description** | Verbal/written feature description | `.spec.ts` directly |
-| **From skill** | `/om-integration-tests` | `.spec.ts` + optional scenario markdown |
+Markdown scenarios (`.ai/qa/scenarios/TC-*.md`) are the id source and optional reference material. Tests can be written from a spec, a scenario, or a feature description; when a scenario exists, carry its id in the test title and mention it in the file's header comment.
 
 ---
 
 ## Two Testing Modes
 
-### 1. Executable Tests (Playwright TypeScript) — Preferred
+### 1. Executable e2e tests (preferred)
 
-Pre-written tests discovered from module `__integration__` folders run headlessly via `yarn test:integration`. Zero token cost, CI-ready. Do not add executable `.spec.ts` files under `.ai/qa/tests`; that directory is reserved for the shared Playwright config.
+`e2e/tests/*.e2e.ts`, run with `npm test` inside `e2e/`. A model key is needed for uncached steps; cached steps replay for free.
 
-```bash
-yarn test:integration
-```
+### 2. Manual AI-driven QA (Playwright MCP)
 
-### 2. Manual AI-Driven Tests (Playwright MCP)
-
-An AI agent reads a scenario or spec and executes it interactively via Playwright MCP. Useful for exploratory testing and for creating new executable tests.
+An agent reads a scenario or spec and executes it interactively through the browser provider in `.ai/browsers/`. Use it for exploration and to discover the flow before writing an e2e test.
 
 ---
 
-## Interactive Ephemeral Runner
-
-Use interactive mode as the default local workflow when you want one ephemeral app/database session and multiple test runs without repeating full bootstrap.
+## Ephemeral Environment
 
 ```bash
-yarn test:integration:ephemeral:interactive
+yarn test:ephemeral:start            # app + isolated database, no dev server needed, Docker required
+yarn test:ephemeral:start:verbose
 ```
 
-What you can do from the menu:
-
-- Run all tests
-- Run one selected `.spec.ts` file
-- Refresh the discovered test list
-- Open Playwright HTML report
-- Quit and clean up the environment
-
-Useful flags:
-
-- `--workers <n>`
-- `--retries <n>`
-- `--verbose`
-- `--screenshots`
-- `--no-screenshots`
-
-Environment state:
-
-- Active ephemeral environment is written to `.ai/qa/ephemeral-env.json`
-- Default app port is `5001` when available
-- If `5001` is busy, a free fallback port is used and written to `.ai/qa/ephemeral-env.json`
-- File is cleared automatically when the ephemeral environment is stopped
+- State is written to `.ai/qa/ephemeral-env.json` (`baseUrl`, `port`, `databaseUrl`); never edit it by hand
+- Default app port is `5001`; a free fallback port is used when it is busy
+- The file is cleared when the environment stops
+- Reuse, TTL, and teardown rules live in the `om-prepare-test-env` skill
 
 ---
 
 ## How to Create New Tests
 
-### Option A: Use `/om-integration-tests` Skill (Recommended)
+### Option A: `/om-integration-tests` skill (recommended)
 
-The skill reads the related spec, explores the running app via Playwright MCP, and produces executable tests automatically. It optionally generates a markdown scenario for documentation.
+Reads the spec or scenario, explores the running app, writes the test in the right area file, runs it.
 
-```
-/om-integration-tests
-```
+### Option B: Manual
 
-### Option B: Manual Workflow
+1. Read the spec (`.ai/specs/*.md`), the scenario (`.ai/qa/scenarios/TC-*.md`), or the feature description.
+2. Explore the flow through the browser provider against the URL from `.ai/qa/ephemeral-env.json`; note labels, button text, the URL after submit.
+3. Add a test to the matching `e2e/tests/<area>.e2e.ts`:
 
-#### Step 1 — Understand What to Test
-
-Read one of:
-- A spec from `.ai/specs/*.md` or `.ai/specs/enterprise/*.md`
-- A scenario from `.ai/qa/scenarios/TC-*.md` (if one exists)
-- A feature description from the user
-
-#### Step 2 — Explore via Playwright MCP
-
-Always check `.ai/qa/ephemeral-env.json` first and reuse an existing running environment.
-
-If no active environment exists, start interactive mode first:
-
-```bash
-yarn test:integration:ephemeral:start
-```
-
-Use isolated app mode only for MCP/manual exploration without the menu:
-
-```bash
-yarn test:integration:ephemeral:start
-```
-
-Use `base_url` from `.ai/qa/ephemeral-env.json` to avoid interference with any other local app instance.
-
-Walk through the test flow interactively to discover actual selectors:
-
-```
-mcp__playwright__browser_navigate({ url: "http://127.0.0.1:<ephemeral-port>/login" })
-mcp__playwright__browser_snapshot()
-mcp__playwright__browser_click({ element: "Submit button", ref: "..." })
-```
-
-For each test step:
-1. Execute the action via Playwright MCP
-2. Snapshot to identify actual element locators (roles, labels, text)
-3. Verify the expected result matches reality
-4. Note the locator strategy that works
-
-#### Step 3 — Write the TypeScript Test
-
-Create the test in the module where behavior lives:
-
-- `packages/<package>/src/modules/<module>/__integration__/TC-{CATEGORY}-{XXX}.spec.ts`
-- `apps/mercato/src/modules/<module>/__integration__/TC-{CATEGORY}-{XXX}.spec.ts`
-- `packages/create-app/template/src/modules/<module>/__integration__/TC-{CATEGORY}-{XXX}.spec.ts`
-- `packages/enterprise/modules/<module>/__integration__/TC-{CATEGORY}-{XXX}.spec.ts` for overlay tests only
-- Nested subfolders inside `__integration__` are supported
-
-**UI test template:**
-
-```typescript
-import { test, expect } from '@playwright/test';
-import { login } from './helpers/auth';
-
-/**
- * TC-{CATEGORY}-{XXX}: {Title}
- * Source: .ai/qa/scenarios/TC-{CATEGORY}-{XXX}-{slug}.md (if exists)
- */
-test.describe('TC-{CATEGORY}-{XXX}: {Title}', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page, 'admin');
-  });
-
-  test('should {main scenario}', async ({ page }) => {
-    await page.goto('/backend/...');
-    await page.getByRole('button', { name: '...' }).click();
-    await expect(page.getByText('...')).toBeVisible();
-  });
+```ts
+test('TC-CRM-001 creates a company and finds it in the list', async ({ app, agent, api, stamp, browser }) => {
+  const name = `${stamp} Company`;
+  await app.open('/backend/customers/companies');
+  await agent.act('Create a new company named {name}. Submit the form.', { params: { name: unique(name) } });
+  await expect(browser).toHaveURL(/\/backend\/customers\/companies-v2\/[0-9a-f-]{36}$/i, { timeout: 60_000 });
+  api.track('/api/customers/companies', idFromUrl(await browser.url()));
+  await agent.assert(`the company detail page for "${name}" is showing`);
 });
 ```
 
-**API test template:**
-
-```typescript
-import { test, expect } from '@playwright/test';
-import { getAuthToken, apiRequest } from './helpers/api';
-
-/**
- * TC-{CATEGORY}-{XXX}: {Title}
- * Source: .ai/qa/scenarios/TC-{CATEGORY}-{XXX}-{slug}.md (if exists)
- */
-test.describe('TC-{CATEGORY}-{XXX}: {Title}', () => {
-  let token: string;
-
-  test.beforeAll(async ({ request }) => {
-    token = await getAuthToken(request);
-  });
-
-  test('should {main scenario}', async ({ request }) => {
-    const response = await apiRequest(request, 'GET', '/api/...', { token });
-    expect(response.ok()).toBeTruthy();
-    const body = await response.json();
-    expect(body).toHaveProperty('...');
-  });
-});
-```
-
-#### Step 4 — Verify
-
-Run the test to confirm it passes:
-
-```bash
-npx playwright test --config .ai/qa/tests/playwright.config.ts <path-to-test-file>
-```
-
-### Conditional Metadata (Folder + Test)
-
-Use optional metadata to skip tests when required modules or external environment variables are not enabled.
-
-- Folder-level metadata:
-  - Add `meta.ts` or `index.ts` under any `__integration__/` subfolder
-  - Supported module keys: `dependsOnModules`, `requiredModules`, `requiresModules`
-  - Supported env keys: `requiredEnvVars`, `requiresEnvVars`, `requiredAnyEnvVars`, `requiresAnyEnvVars`
-- Per-test metadata:
-  - Add the same keys inside the `.spec.ts` file, or create sibling `TC-*.meta.ts`
-- Inheritance:
-  - Metadata is inherited from `__integration__/` root through nested subfolders, then test-level metadata is applied
-- Behavior:
-  - If any declared dependency module is not enabled, that folder/test is excluded from discovery and run
-  - If any `requiredEnvVars` entry is missing or blank, that folder/test is excluded from discovery and run
-  - If `requiredAnyEnvVars` is set and all listed env vars are missing or blank, that folder/test is excluded from discovery and run
-  - Only use env metadata for tests that genuinely require external services. If the behavior can be stubbed or the model-backed subcase can be skipped inside the test, keep the test runnable without secrets.
-
-Example folder metadata:
-
-```ts
-export const integrationMeta = {
-  description: 'Sales flows requiring currencies module',
-  dependsOnModules: ['sales', 'currencies'],
-}
-```
-
-Example env-gated metadata for a truly live LLM test:
-
-```ts
-export const integrationMeta = {
-  description: 'Live AI provider smoke',
-  requiredAnyEnvVars: ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY'],
-}
-```
+4. Verify: `cd e2e && APP_URL=<url> npm test -- <area>.e2e.ts`.
 
 ### Executable Test Rules
 
-- Use Playwright locators: `getByRole`, `getByLabel`, `getByText`, `getByPlaceholder` — avoid CSS selectors
-- If a matching scenario exists, reference it in a comment (e.g., `Source: .ai/qa/scenarios/TC-AUTH-001-*.md`)
-- Keep tests independent — each test handles its own login
-- Keep tests data-independent — do not rely on seeded/demo records being present
-- Create required fixtures per test (prefer API setup), and always clean up created data in `finally`/teardown
-- Ensure tests are deterministic/stable across retries and run order (no cross-test state coupling)
-- Keep reusable helpers centralized in `packages/core/src/helpers/integration/` (importable as `@open-mercato/core/helpers/integration/*`), and re-export from module-local helper files when needed
-- One `.spec.ts` file per test case
-- MUST NOT leave broken tests — fix or skip with `test.skip()` and a reason
+- Natural-language goals for the agent, deterministic checks for the outcome (`expect(browser).toHaveURL`, `screen.getBy*`, `api.list` read-back, `agent.extract` with a zod schema)
+- Seed through `api.create` when the flow needs an existing record; track UI-created records with `api.track`
+- Independent, order-free, safe across retries; no hardcoded ids
+- New page vocabulary goes into the agent `context` in `e2e/e2e.config.ts`, not into the goal text
 
 ---
 
-## How to Test Manually (AI-Driven via Playwright MCP)
+## How to Test Manually
 
-### UI Testing
+### UI
 
-Use Playwright MCP to execute UI test scenarios. The browser automation handles navigation, form interactions, and visual verification.
+Drive the browser provider (`.ai/browsers/`): navigate, snapshot, interact, verify. Use the ephemeral URL.
 
-```bash
-# Example: Navigate and interact
-mcp__playwright__browser_navigate({ url: "http://127.0.0.1:<ephemeral-port>/backend/login" })
-mcp__playwright__browser_snapshot()
-mcp__playwright__browser_fill_form({ fields: [...] })
-mcp__playwright__browser_click({ element: "Submit button", ref: "..." })
-```
-
-**Workflow:**
-1. Navigate to the target URL
-2. Take a snapshot to identify element refs
-3. Interact with elements (click, type, fill forms)
-4. Verify expected results via snapshots or assertions
-
-### API Testing (cURL)
-
-Use cURL for direct API endpoint testing.
+### API (cURL)
 
 ```bash
-# Login and get token
-curl -X POST http://127.0.0.1:<ephemeral-port>/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "admin@acme.com", "password": "secret"}'
+# Login (form-encoded; a JSON body is rejected with 400)
+curl -X POST http://127.0.0.1:<port>/api/auth/login \
+  -d 'email=admin@acme.com&password=secret'
 
 # Authenticated request
-curl -X GET http://127.0.0.1:<ephemeral-port>/api/customers/companies \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json"
+curl http://127.0.0.1:<port>/api/customers/companies \
+  -H "Authorization: Bearer <token>"
 ```
 
 ---
 
 ## Default Credentials
 
-These accounts are created via `mercato init` command:
+Created by `mercato init`:
 
 | Role | Email | Password |
 |------|-------|----------|
@@ -440,56 +161,32 @@ These accounts are created via `mercato init` command:
 | Admin | `admin@acme.com` | `secret` |
 | Employee | `employee@acme.com` | `secret` |
 
-**Note:** Superadmin has access to all features across all tenants. Admin has full access within their organization. Employee has limited access based on role configuration.
+Superadmin spans all tenants, admin has full access within the organization, employee is role-limited. Login is rate limited (5 attempts / 60 s per email), which is why the suite uses saved sessions.
 
 ---
 
 ## Results Presentation
 
-### For `yarn test:integration` (Headless)
+### Executable suite
 
-Results are automatically generated:
-- **Console**: Pass/fail summary with list reporter
-- **JSON**: `test-results/results.json` — machine-readable for CI
-- **HTML**: `test-results/html/` — interactive report (open with `yarn test:integration:report`)
+- Console summary from `npm test`
+- `e2e/.e2e/report.json` for machines
+- `e2e/.e2e/artifacts/` for screenshots and traces of failures
 
-### For AI-Driven Tests (Manual)
-
-Present test results in a table format:
-
-#### Test Run Summary
+### Manual runs
 
 | Test ID | Test Name | Status | Notes |
 |---------|-----------|--------|-------|
 | TC-AUTH-001 | User Login Success | PASS | |
-| TC-AUTH-002 | Invalid Credentials | PASS | |
 | TC-AUTH-003 | Remember Me | FAIL | Session not persisted |
-| TC-CAT-001 | Product Creation | PASS | |
 
-#### Summary Statistics
-
-| Metric | Count |
-|--------|-------|
-| Total Tests | X |
-| Passed | X |
-| Failed | X |
-| Skipped | X |
-| Pass Rate | X% |
-
-#### Failed Tests Detail
-
-For each failed test, include:
-- **Test ID**: TC-XXX-XXX
-- **Failure Step**: Step number where failure occurred
-- **Expected**: What should have happened
-- **Actual**: What actually happened
-- **Screenshot/Evidence**: If applicable
+Then totals (total, passed, failed, skipped, pass rate) and, per failure: test id, failing step, expected, actual, evidence.
 
 ---
 
-## How to Manage Scenarios (Optional)
+## How to Manage Scenarios
 
-Scenarios live in `.ai/qa/scenarios/` and serve as documentation. They are NOT required for test generation.
+Scenarios live in `.ai/qa/scenarios/`.
 
 ### Naming Convention
 
@@ -497,10 +194,9 @@ Scenarios live in `.ai/qa/scenarios/` and serve as documentation. They are NOT r
 TC-[CATEGORY]-[XXX]-[title].md
 ```
 
-- **TC**: Test Case prefix
-- **CATEGORY**: Module category code (see category codes below)
+- **CATEGORY**: code from the table below
 - **XXX**: 3-digit sequential number
-- **title**: Kebab-case descriptive title
+- **title**: kebab-case
 
 ### Category Codes
 
@@ -549,11 +245,10 @@ TC-[CATEGORY]-[XXX]
 [UI Test / API Test]
 
 ## Description
-[Brief description of what this test validates]
+[What this test validates]
 
 ## Prerequisites
-- [Prerequisite 1]
-- [Prerequisite 2]
+- [Prerequisite]
 
 ## API Endpoint (for API tests)
 `[METHOD] /api/path`
@@ -562,22 +257,18 @@ TC-[CATEGORY]-[XXX]
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | [Action] | [Expected] |
-| 2 | [Action] | [Expected] |
 
 ## Expected Results
-- [Final expected outcome 1]
-- [Final expected outcome 2]
+- [Outcome]
 
 ## Edge Cases / Error Scenarios
-- [Edge case 1]
-- [Edge case 2]
+- [Edge case]
 ```
 
 ### Best Practices
 
-1. **One scenario per file**: Keep tests atomic and focused
-2. **Clear prerequisites**: List all setup requirements
-3. **Specific steps**: Each step should be actionable
-4. **Measurable results**: Expected results should be verifiable
-5. **Include edge cases**: Document error scenarios and boundary conditions
-6. **Set priority**: High for critical paths, Medium for standard flows, Low for edge cases
+1. One scenario per file
+2. List every prerequisite
+3. Actionable steps, verifiable results
+4. Include edge cases
+5. Set priority: High for critical paths, Medium for standard flows, Low for edge cases

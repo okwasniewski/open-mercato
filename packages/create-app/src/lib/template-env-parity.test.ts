@@ -75,7 +75,7 @@ const KNOWN_TEMPLATE_OMISSIONS = new Set([
 
 /** In the template env but not the monorepo one. */
 const KNOWN_TEMPLATE_ONLY = new Set([
-  // Set by the standalone integration harness, which has no monorepo analogue.
+  // Set by the ephemeral app runtime (`yarn mercato test:ephemeral`), which has no monorepo .env analogue.
   'OM_INTEGRATION_TEST',
   // Legacy spelling kept for scaffolds already using it; the monorepo documents
   // the `OM_DEFAULT_ATTACHMENT_OCR_ENABLED` form instead.

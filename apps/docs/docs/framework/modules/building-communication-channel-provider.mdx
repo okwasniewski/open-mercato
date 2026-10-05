@@ -649,9 +649,9 @@ yarn mercato configs cache structural --all-tenants   # after any modules.ts cha
 ```
 
 Unit-test the pure parts — capability/method parity, signature verification (every rejection path,
-not just the happy one), inbound normalization, outbound conversion, the state-merge rules. Ship
-integration specs under `__integration__/` that drive the real app for everything that does not need
-a live remote account: adapter registration, fail-closed credential validation, the signed route's
+not just the happy one), inbound normalization, outbound conversion, the state-merge rules. Add
+scenarios to the agentic e2e suite under `e2e/` that drive the real app for everything that does not
+need a live remote account: adapter registration, fail-closed credential validation, the signed route's
 rejections, reaction round-trip through the thread mapping, tenant-scoped health guards. Where a
 sub-assertion genuinely needs a live account, say so in the spec and name the unit test that owns
 that half — a stated ceiling is worth more than a test that pretends.

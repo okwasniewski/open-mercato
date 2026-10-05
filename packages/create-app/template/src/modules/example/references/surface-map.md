@@ -11,7 +11,7 @@ Read [`../README.md`](../README.md) first if you have not: this module is **sour
 - **Source** — the exact file(s). Open only these.
 - **Status** — `readable` (passed the reference-quality gate) or `qa-only` (present and working, but fails a current project rule — do not copy).
 
-Test paths are shown as plain code, not links: `__tests__/**` and `__integration__/**` are repository-only evidence and are filtered out of emitted apps.
+Test paths are shown as plain code, not links: `__tests__/**` is repository-only evidence and is filtered out of emitted apps. Browser and API scenarios live in the repository e2e suite under `e2e/`.
 
 Rule owners named per row own the *normative* rule. This module owns only *one compiling way to satisfy it*.
 
@@ -30,7 +30,7 @@ Rule owners named per row own the *normative* rule. This module owns only *one c
 | `module.translatable-fields` | `<module>:<entity>` → translatable field names; declaring the file injects the Translation Manager into that entity's CrudForm header spot | [`../translations.ts`](../translations.ts) | readable |
 | `module.generator-plugin` | Type-only generator declaration → deterministic reference-index output → bootstrap registration in a duplicate- and path-validating consumer | [`../generators.ts`](../generators.ts), [`../reference-index.ts`](../reference-index.ts), [`../lib/module-reference-index.ts`](../lib/module-reference-index.ts) | readable |
 
-Evidence: `__tests__/acl-dependencies.test.ts`, `__tests__/translations.test.ts`, `__tests__/setup-seeding.test.ts`, `__tests__/di-registration.test.ts`, `lib/__tests__/module-reference-index.test.ts`, `__integration__/TC-EXAMPLE-016-generator-plugin.spec.ts`.
+Evidence: `__tests__/acl-dependencies.test.ts`, `__tests__/translations.test.ts`, `__tests__/setup-seeding.test.ts`, `__tests__/di-registration.test.ts`, `lib/__tests__/module-reference-index.test.ts`.
 
 Rule owners: `om-module-scaffold`, `om-integration-builder` (DI adapters).
 
@@ -96,7 +96,7 @@ Rule owners: `om-module-scaffold` (search config), `om-data-model-design` (encry
 | `api.option-source-routes` | Backends for `optionsUrl` on tags/listbox custom fields | [`../api/tags/route.ts`](../api/tags/route.ts), [`../api/assignees/route.ts`](../api/assignees/route.ts), [`../api/notifications/route.ts`](../api/notifications/route.ts) | readable |
 | `api.interceptors` | Exact-route and wildcard interceptors: rejection, timeout, thrown error, query rewrite, cross-module `?ids=` narrowing, `after` response merge via metadata | [`../api/interceptors.ts`](../api/interceptors.ts) | readable |
 
-Evidence: `__integration__/TC-UMES-004.spec.ts`, `__integration__/TC-UMES-021.spec.ts`, `api/__tests__/tags.tenant-scope.test.ts`, `api/__tests__/todos.request-scope.test.ts`.
+Evidence: `api/__tests__/tags.tenant-scope.test.ts`, `api/__tests__/todos.request-scope.test.ts`.
 
 Rule owners: `om-module-scaffold`, `om-system-extension` (interceptors).
 
@@ -121,7 +121,7 @@ Three decisions in the portal row are the copyable part, and none of them are vi
 
 **An unscoped write produces nothing.** `matchesAudience` in `customer_accounts/api/portal/events/stream.ts` drops a payload with no `tenantId`, so emitting one would only put an unaddressable record on the bus. The subscriber returns instead.
 
-Evidence: `commands/__tests__/todos.update.test.ts`, `commands/__tests__/todos.prepare-scope.test.ts`, `commands/__tests__/todos.undo.test.ts`, `__tests__/announce-todo-to-portal.test.ts`, `__integration__/TC-UMES-003.spec.ts`, `__integration__/TC-UMES-006-mutation-lifecycle.spec.ts`, `__integration__/TC-EXAMPLE-002-query-index-failure.spec.ts`.
+Evidence: `commands/__tests__/todos.update.test.ts`, `commands/__tests__/todos.prepare-scope.test.ts`, `commands/__tests__/todos.undo.test.ts`, `__tests__/announce-todo-to-portal.test.ts`.
 
 Rule owners: `om-data-model-design` (commands, events/indexer), `om-system-extension` (interceptors, subscribers).
 
@@ -154,7 +154,7 @@ The **frontend** row runs through the same shared executor but from `src/app/(fr
 
 What that leaves is the canonical public-surface job: URL canonicalization. Serving one document at two casings is two addresses for one page; the entry collapses them and returns `continue` once the path already is canonical, so the redirect cannot loop.
 
-Evidence: `__integration__/TC-EXAMPLE-001-todo-label-edit.spec.ts`, `widgets/dashboard/__tests__/config.test.ts`, `__tests__/backend-middleware.test.ts`, `__tests__/frontend-middleware.test.ts`.
+Evidence: `widgets/dashboard/__tests__/config.test.ts`, `__tests__/backend-middleware.test.ts`, `__tests__/frontend-middleware.test.ts`.
 
 Rule owners: `om-backend-ui-design`, `om-system-extension` (page middleware).
 
@@ -189,7 +189,7 @@ Three things about component overrides are worth reading before you copy the fil
 
 One mechanical trap comes with them: every value the fact extractor has to read must be declared in `widgets/components.ts` itself. `staticValue` resolves an identifier only against initializers in the file it is parsing, so the handle constant and the `propsTransform` callable are both declared locally rather than imported from `components/ComponentOverrideShowcase.tsx` — an imported handle publishes **zero** component-override contributions and an imported transform falls through to the `replace` default. Neither is a builder-vs-literal or named-function-vs-arrow choice: a plain string literal and an inline arrow fold identically. `widgets/__tests__/component-override-modes.test.ts` pins the two handle spellings together; `widgets/__tests__/components.test.ts` asserts the extractor resolves all five entries and their modes.
 
-Evidence: `__tests__/extension-points.test.ts`, `widgets/__tests__/injection-table.test.ts`, `widgets/__tests__/components.test.ts`, `widgets/__tests__/component-override-modes.test.ts`, `__integration__/TC-UMES-001.spec.ts`, `__integration__/TC-UMES-002.spec.ts`, `__integration__/TC-UMES-004.spec.ts`, `__integration__/TC-UMES-012.spec.ts`, `__integration__/TC-UMES-022-overrides.spec.ts`.
+Evidence: `__tests__/extension-points.test.ts`, `widgets/__tests__/injection-table.test.ts`, `widgets/__tests__/components.test.ts`, `widgets/__tests__/component-override-modes.test.ts`.
 
 `overrides.compileable-reference` exists because the app-registry row above does not survive scaffolding: `applyStarterPreset` rewrites `src/modules.ts` from a lean template for the `empty` and `crm` presets, and that template's `ModuleEntry` type does not declare an `overrides` field at all. This module's source ships in every preset, so a copy that compiles against the real `ModuleOverrides` interface lives here too.
 
@@ -222,7 +222,7 @@ Two properties decide whether an override you write behaves:
 
 Both keys here name ids **this module owns**, which is the one place these rows deliberately diverge from production practice: a real override names a foreign id, but a canonical reference module that someone enables to look around must not rewrite a shipped assistant while they do. The replacements are derived from the base by spread and move only the feature gate, so the handler and the prompt cannot fork.
 
-Evidence: `__tests__/ai-tools.test.ts`, `__tests__/ai-agents.test.ts`, `__tests__/ai-overrides.test.ts` (unit only — no `__integration__` spec exercises the AI surface yet).
+Evidence: `__tests__/ai-tools.test.ts`, `__tests__/ai-agents.test.ts`, `__tests__/ai-overrides.test.ts`.
 
 Rule owner: `om-create-ai-agent`.
 
@@ -238,7 +238,7 @@ Rule owner: `om-create-ai-agent`.
 | `integrations.local-bundle` | Discoverable local bundle reusing the payment and shipping mocks plus a DI-registered deterministic currency-rate provider; all three identities need no credentials or network | [`../integration.ts`](../integration.ts), [`../di.ts`](../di.ts), [`../lib/mock-currency-rate-provider.ts`](../lib/mock-currency-rate-provider.ts) | readable |
 | `workflows.code-definition` | Minimal code workflow triggered by the typed `example.todo.created` event, mapping the Todo id into context and ending without activities or external side effects | [`../workflows.ts`](../workflows.ts) | readable |
 
-Evidence: `__tests__/notifications.client.test.tsx`, `__tests__/specialized-registries.test.ts`, `__integration__/TC-EXAMPLE-015-specialized-registries.spec.ts`, `__integration__/TC-UMES-003.spec.ts`, `__integration__/TC-UMES-005.spec.ts`, `__integration__/TC-UMES-008.spec.ts`, `__integration__/TC-UMES-020.spec.ts`, `lib/__tests__/mock-gateway-adapter.test.ts`, `lib/__tests__/mock-shipping-adapter.test.ts`, `lib/__tests__/mock-webhook-endpoint-adapter.test.ts`.
+Evidence: `__tests__/notifications.client.test.tsx`, `__tests__/specialized-registries.test.ts`, `lib/__tests__/mock-gateway-adapter.test.ts`, `lib/__tests__/mock-shipping-adapter.test.ts`, `lib/__tests__/mock-webhook-endpoint-adapter.test.ts`.
 
 Rule owners: `om-system-extension`, `om-integration-builder`.
 
@@ -266,7 +266,7 @@ The following files are present in the tree but are **not** capability rows and 
 
 Recorded so the gate stays honest; none of these demote the row.
 
-**Proven by unit tests only**: `module.acl-features`, `search.encrypted-column-list-filter`, `api.option-source-routes`, `commands.undo-redo`, `ui.dashboard-widget`, and `overrides.compileable-reference`. None of these six has a dedicated integration spec; their `integrationTestPaths` entries are repository evidence, not a runtime-coverage claim.
+**Proven by unit tests only**: every row. `integrationTestPaths` holds repository unit-test evidence, not a runtime-coverage claim; the browser and API scenarios that used to sit in `__integration__/` run from the repository e2e suite under `e2e/` and are not tracked per capability.
 
 - `commands/todos.ts`, `api/interceptors.ts`, `lib/mock-*-adapter.ts` — several internal `throw new Error('...')` assertions are missing the `[internal]` prefix required by the i18n hardcoded-string convention.
 - `commands/interceptors.ts`, `subscribers/audit-delete.ts` — raw `console.log` behind an eslint disable instead of the `createLogger` facade (advisory `yarn logger:check-console`).
@@ -278,8 +278,5 @@ Recorded so the gate stays honest; none of these demote the row.
 - `data/guards.ts`, `subscribers/prevent-uncomplete.ts` — English rejection messages are inline object properties rather than translation keys.
 - `widgets/dashboard/todos/widget.client.tsx`, `widgets/dashboard/notes/widget.client.tsx`, `widgets/dashboard/welcome/widget.client.tsx` — arbitrary Tailwind values (`min-h-[120px]`, `min-h-[160px]`); the widget registration and settings files linked above are unaffected.
 
-The cache and setup rows are proven by both focused unit coverage and their module-local integration lanes: `__integration__/TC-EXAMPLE-007-cache.spec.ts` and `__integration__/TC-EXAMPLE-010-setup-seeding.spec.ts`.
+`overrides.compileable-reference` remains a compile-time reference proved by `__tests__/module-overrides-reference.test.ts`; it has no runtime call site to exercise.
 
-`overrides.compileable-reference` remains a compile-time reference proved by `__tests__/module-overrides-reference.test.ts`; it has no runtime call site to exercise. `events.portal-broadcast` keeps its focused matcher/registry unit proof and is also driven through a real customer-authenticated portal SSE connection by `__integration__/TC-EXAMPLE-012-extension-topology.spec.ts`, including the scope/action payload and title/notes exclusion. `module.setup-scheduler-target` keeps its focused registration proof, while `__integration__/TC-EXAMPLE-003-todo-bulk-progress.spec.ts` exercises the target's durable outbox dispatch and recovery path and `__integration__/TC-EXAMPLE-010-setup-seeding.spec.ts` executes the scoped setup contract.
-
-Six more rows left that list on 2026-08-10. `runtime.bulk-operation-progress` gained `__integration__/TC-EXAMPLE-003-todo-bulk-progress.spec.ts`, which closes the gap this paragraph used to name explicitly: the browser lifecycle (selection, start feedback, the 202 carrying the `progressJobId`) and the real queue round trip are now exercised, alongside crash recovery from the durable outbox, resume-from-checkpoint, mixed failure, cancellation and cross-organization refusal. The five AI rows gained `__integration__/TC-EXAMPLE-014-ai-contracts.spec.ts`, which dispatches the tools through the real executor rather than a handler call, so the ACL gate and the organization boundary are proved at the HTTP surface. Three rows had left the list on 2026-08-06: the two page-middleware rows, now driven end to end through both catch-all pages, and the cross-module extension row, through the contributor's own scoped read/write round trip against a real host record.
